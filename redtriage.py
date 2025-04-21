@@ -13,6 +13,14 @@ from rich.panel import Panel
 from rich.table import Table
 from rich import box
 
+# Display banner on import
+banner_console = Console()
+banner_console.print(Panel.fit(
+    "[bold red]RedTriage[/bold red] - A tool for red teamers to clean up artifacts\n[bold]Created by:[/bold] Zarni (Neo)",
+    title="RedTriage v1.0.0",
+    border_style="red"
+), highlight=False)
+
 # Import modules
 from modules.scanner import scan_artifacts
 from modules.cleaner import clean_artifacts
@@ -31,7 +39,7 @@ class OutputFormat(str, Enum):
 
 # Create the app with comprehensive help formatting
 app = typer.Typer(
-    help="RedTriage: A tool for red teamers to clean up artifacts after engagements",
+    help="RedTriage: A tool for red teamers to clean up artifacts after engagements\nCreated by: Zarni (Neo)",
     add_completion=False,
     rich_markup_mode="rich",
     no_args_is_help=True,
@@ -44,6 +52,7 @@ console = Console()
 def main(ctx: typer.Context):
     """
     RedTriage - A tool for red teamers to clean up artifacts after engagements.
+    Created by: Zarni (Neo)
     
     Run with --help for comprehensive documentation or use specific commands.
     """
@@ -142,6 +151,8 @@ def report(
 def help():
     """
     Show detailed help information about RedTriage
+    
+    RedTriage is created by Zarni (Neo)
     """
     show_detailed_help()
 
