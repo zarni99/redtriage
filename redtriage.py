@@ -27,6 +27,7 @@ class OutputFormat(str, Enum):
     TXT = "txt"
     JSON = "json"
     HTML = "html"
+    PDF = "pdf"
 
 app = typer.Typer(help="RedTriage: A tool for red teamers to clean up artifacts after engagements")
 console = Console()
@@ -199,7 +200,7 @@ def help():
     
     report_table.add_row(
         "--format", 
-        "Output format: txt, json, or html"
+        "Output format: txt, json, html, or pdf"
     )
     report_table.add_row(
         "--output", 

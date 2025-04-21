@@ -80,8 +80,11 @@ chmod +x redtriage.py
 #### Report Command
 
 ```bash
-# Generate report in specific format (txt, json, html)
+# Generate report in specific format (txt, json, html, pdf)
 ./redtriage.py report --format html
+
+# Generate PDF report
+./redtriage.py report --format pdf --output report.pdf
 
 # Specify output file
 ./redtriage.py report --format html --output report.html
@@ -113,6 +116,7 @@ This tool is designed for legitimate use by authorized red teamers during or aft
 - typer
 - colorama
 - rich
+- reportlab (optional, for PDF report generation)
 
 ## License
 

@@ -33,6 +33,10 @@ class Cleaner:
             "histories": [],
             "tasks": [],
             "configs": [],
+            "network": [],
+            "registry": [],
+            "containers": [],
+            "processes": [],
         }
     
     def expand_path(self, path: str) -> str:
@@ -306,6 +310,189 @@ class Cleaner:
             if self.restore_config_file(config_info):
                 self.cleaned_items["configs"].append(config_info)
     
+    def clean_suspicious_network(self, network_items: List[Dict[str, Any]]) -> None:
+        """Clean suspicious network connections"""
+        if not network_items:
+            return
+            
+        print(f"\n[*] Cleaning {len(network_items)} suspicious network connections...")
+        
+        for item in network_items:
+            if not self.force:
+                prompt = f"Terminate process with PID {item['pid']} ({item.get('process', 'Unknown')})? [y/N] "
+                response = input(prompt).strip().lower()
+                if response != 'y':
+                    print(f"Skipping process: {item['pid']}")
+                    continue
+            
+            if self.dry_run:
+                print(f"[DRY RUN] Would terminate process: {item['pid']}")
+                self.cleaned_items["network"].append(item)
+                continue
+                
+            try:
+                # Terminate the process
+                if self.os == "Windows":
+                    result = subprocess.run(
+                        ["taskkill", "/F", "/PID", item["pid"]],
+                        capture_output=True, text=True, check=False
+                    )
+                else:
+                    result = subprocess.run(
+                        ["kill", "-9", item["pid"]],
+                        capture_output=True, text=True, check=False
+                    )
+                
+                if result.returncode == 0:
+                    print(f"Terminated process: {item['pid']}")
+                    self.cleaned_items["network"].append(item)
+                else:
+                    print(f"Failed to terminate process {item['pid']}: {result.stderr}")
+            except Exception as e:
+                print(f"Error terminating process {item['pid']}: {e}")
+    
+    def clean_registry_artifacts(self, registry_items: List[Dict[str, Any]]) -> None:
+        """Clean suspicious registry entries (Windows only)"""
+        if self.os != "Windows" or not registry_items:
+            return
+            
+        print(f"\n[*] Cleaning {len(registry_items)} suspicious registry entries...")
+        
+        for item in registry_items:
+            key = item["key"]
+            value_name = item["value_name"]
+            
+            if not self.force:
+                prompt = f"Delete registry value {key}\\{value_name}? [y/N] "
+                response = input(prompt).strip().lower()
+                if response != 'y':
+                    print(f"Skipping registry value: {key}\\{value_name}")
+                    continue
+            
+            if self.dry_run:
+                print(f"[DRY RUN] Would delete registry value: {key}\\{value_name}")
+                self.cleaned_items["registry"].append(item)
+                continue
+                
+            try:
+                # Delete the registry value
+                result = subprocess.run(
+                    ["reg", "delete", key, "/v", value_name, "/f"],
+                    capture_output=True, text=True, check=False
+                )
+                
+                if result.returncode == 0:
+                    print(f"Deleted registry value: {key}\\{value_name}")
+                    self.cleaned_items["registry"].append(item)
+                else:
+                    print(f"Failed to delete registry value {key}\\{value_name}: {result.stderr}")
+            except Exception as e:
+                print(f"Error deleting registry value {key}\\{value_name}: {e}")
+    
+    def clean_container_artifacts(self, container_items: List[Dict[str, Any]]) -> None:
+        """Clean suspicious container artifacts"""
+        if not container_items:
+            return
+            
+        print(f"\n[*] Cleaning {len(container_items)} suspicious container artifacts...")
+        
+        for item in container_items:
+            if "container_id" in item:
+                # This is a container
+                container_id = item["container_id"]
+                name = item.get("name", "Unknown")
+                
+                if not self.force:
+                    prompt = f"Stop and remove container {name} ({container_id})? [y/N] "
+                    response = input(prompt).strip().lower()
+                    if response != 'y':
+                        print(f"Skipping container: {name}")
+                        continue
+                
+                if self.dry_run:
+                    print(f"[DRY RUN] Would stop and remove container: {name} ({container_id})")
+                    self.cleaned_items["containers"].append(item)
+                    continue
+                    
+                try:
+                    # Stop and remove the container
+                    subprocess.run(
+                        ["docker", "stop", container_id],
+                        capture_output=True, text=True, check=False
+                    )
+                    
+                    result = subprocess.run(
+                        ["docker", "rm", container_id],
+                        capture_output=True, text=True, check=False
+                    )
+                    
+                    if result.returncode == 0:
+                        print(f"Removed container: {name} ({container_id})")
+                        self.cleaned_items["containers"].append(item)
+                    else:
+                        print(f"Failed to remove container {name}: {result.stderr}")
+                except Exception as e:
+                    print(f"Error removing container {name}: {e}")
+            
+            elif "path" in item and "type" in item and item["type"] == "config_file":
+                # This is a container configuration file
+                filepath = item["path"]
+                
+                if not self.force:
+                    prompt = f"Delete container configuration file {filepath}? [y/N] "
+                    response = input(prompt).strip().lower()
+                    if response != 'y':
+                        print(f"Skipping file: {filepath}")
+                        continue
+                
+                # Use the secure delete method from files
+                if self.secure_delete_file(filepath):
+                    self.cleaned_items["containers"].append(item)
+    
+    def clean_memory_artifacts(self, memory_items: List[Dict[str, Any]]) -> None:
+        """Clean suspicious processes from memory"""
+        if not memory_items:
+            return
+            
+        print(f"\n[*] Cleaning {len(memory_items)} suspicious processes...")
+        
+        for item in memory_items:
+            pid = item["pid"]
+            process_name = item["process_name"]
+            
+            if not self.force:
+                prompt = f"Terminate process {process_name} (PID: {pid})? [y/N] "
+                response = input(prompt).strip().lower()
+                if response != 'y':
+                    print(f"Skipping process: {process_name}")
+                    continue
+            
+            if self.dry_run:
+                print(f"[DRY RUN] Would terminate process: {process_name} (PID: {pid})")
+                self.cleaned_items["processes"].append(item)
+                continue
+                
+            try:
+                # Terminate the process
+                if self.os == "Windows":
+                    result = subprocess.run(
+                        ["taskkill", "/F", "/PID", pid],
+                        capture_output=True, text=True, check=False
+                    )
+                else:
+                    result = subprocess.run(
+                        ["kill", "-9", pid],
+                        capture_output=True, text=True, check=False
+                    )
+                
+                if result.returncode == 0:
+                    print(f"Terminated process: {process_name} (PID: {pid})")
+                    self.cleaned_items["processes"].append(item)
+                else:
+                    print(f"Failed to terminate process {process_name}: {result.stderr}")
+            except Exception as e:
+                print(f"Error terminating process {process_name}: {e}")
+    
     def clean_system(self, scan_results: Dict[str, Any]) -> Dict[str, Any]:
         """Clean the system based on scan results"""
         print(f"Starting RedTriage cleanup (profile: {self.profile}, dry-run: {self.dry_run}, force: {self.force})")
@@ -327,6 +514,22 @@ class Cleaner:
         # Clean modified config files
         if "modified_configs" in scan_results and scan_results["modified_configs"]:
             self.clean_all_config_files(scan_results["modified_configs"])
+            
+        # Clean suspicious network connections
+        if "suspicious_network" in scan_results and scan_results["suspicious_network"]:
+            self.clean_suspicious_network(scan_results["suspicious_network"])
+            
+        # Clean suspicious registry entries (Windows)
+        if "registry_artifacts" in scan_results and scan_results["registry_artifacts"]:
+            self.clean_registry_artifacts(scan_results["registry_artifacts"])
+            
+        # Clean container artifacts
+        if "container_artifacts" in scan_results and scan_results["container_artifacts"]:
+            self.clean_container_artifacts(scan_results["container_artifacts"])
+            
+        # Clean memory artifacts and processes
+        if "memory_artifacts" in scan_results and scan_results["memory_artifacts"]:
+            self.clean_memory_artifacts(scan_results["memory_artifacts"])
         
         # Add cleanup metadata
         self.cleaned_items["metadata"] = {
