@@ -2,6 +2,8 @@
 
 A CLI tool for red teamers to help clean up traces after penetration tests or red team engagements.
 
+Created by: Zarni (Neo)
+
 ## Features
 
 - **Scan**: Detect common red team artifacts and tools
