@@ -11,6 +11,7 @@ Created by: Zarni (Neo)
 - **Report**: Generate reports in text, JSON, HTML, or PDF format
 - **Help**: Detailed information about the tool's usage and capabilities
 - **Network Scanning**: Identify suspicious network connections and configurations
+- **Tiered Prompting**: User-friendly interface for selecting artifacts to clean
 
 ## Installation
 
@@ -114,6 +115,8 @@ RedTriage can detect and clean various artifacts left by red team activities:
 ./redtriage.py clean --target-user johndoe
 ```
 
+The clean command now features a tiered prompting system for more interactive and controlled artifact cleaning. See the [Tiered Prompting](#tiered-prompting) section for details.
+
 #### Report Command
 
 ```bash
@@ -142,6 +145,32 @@ RedTriage can detect and clean various artifacts left by red team activities:
 - **minimal**: Basic checks and cleanup actions
 - **standard**: Default level - comprehensive but conservative
 - **paranoid**: Aggressive checks and cleanup (may produce false positives)
+
+## Tiered Prompting
+
+RedTriage now features a sophisticated tiered prompting system for handling large numbers of artifacts:
+
+### First-Tier Prompt
+When artifacts are found, you're presented with three options for each category:
+- **Yes**: Clean all artifacts in the category
+- **No**: Skip cleaning all artifacts
+- **Selective**: Enter the second-tier prompt for more control
+
+### Second-Tier Prompt
+If you choose "Selective" in the first tier, you can select:
+- **All**: Clean all items in this category
+- **None**: Skip all items in this category
+- **Interactive**: Select items individually with toggling interface
+- **Range**: Specify numeric ranges of items to clean
+- **Filter**: Filter items by pattern using shell wildcards
+
+### Benefits
+- **Progressive Disclosure**: Only shows details when needed
+- **Efficiency**: Quickly handle groups of artifacts
+- **Flexibility**: Multiple methods to select specific artifacts
+- **Safety**: Better visibility and control over what's being cleaned
+
+This system makes RedTriage much more practical for scenarios with numerous artifacts, allowing you to focus on critical items while maintaining control over the cleanup process.
 
 ## Detection Categories
 
