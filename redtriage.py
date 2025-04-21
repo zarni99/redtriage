@@ -29,8 +29,27 @@ class OutputFormat(str, Enum):
     HTML = "html"
     PDF = "pdf"
 
-app = typer.Typer(help="RedTriage: A tool for red teamers to clean up artifacts after engagements")
+# Create the app with comprehensive help formatting
+app = typer.Typer(
+    help="RedTriage: A tool for red teamers to clean up artifacts after engagements",
+    add_completion=False,
+    rich_markup_mode="rich",
+    no_args_is_help=True,
+    context_settings={"help_option_names": ["-h", "--help"]}
+)
 console = Console()
+
+# Create a callback to display comprehensive help
+@app.callback(invoke_without_command=True)
+def main(ctx: typer.Context):
+    """
+    RedTriage - A tool for red teamers to clean up artifacts after engagements.
+    
+    Run with --help for comprehensive documentation or use specific commands.
+    """
+    # If no command was invoked and help wasn't requested, show help
+    if ctx.invoked_subcommand is None and not ctx.help_option_used:
+        show_detailed_help()
 
 @app.command()
 def scan(
@@ -40,7 +59,16 @@ def scan(
     locations: List[str] = typer.Option(None, "--locations", "-l", help="Specific locations to scan")
 ):
     """
-    Scan for common red team artifacts and tools
+    Scan for common red team artifacts and tools.
+
+    This command detects various artifacts left by red team activities, including:
+    - Suspicious files (tools like mimikatz, netcat, etc.)
+    - Modified configuration files
+    - Shell history files with suspicious commands
+    - Scheduled tasks and cron jobs
+    - Network connections and configurations
+    - Windows registry entries
+    - Container and process artifacts
     """
     typer.echo(f"🔍 Scanning for artifacts (Profile: {profile.value})")
     scan_artifacts(dry_run, profile.value, target_user, locations)
@@ -55,7 +83,17 @@ def clean(
     artifacts: List[str] = typer.Option(None, "--artifacts", "-a", help="Specific artifacts to clean")
 ):
     """
-    Clean up red team artifacts and traces
+    Clean up red team artifacts and traces.
+    
+    This command removes or disables detected artifacts, including:
+    - Deleting suspicious files
+    - Restoring modified configuration files
+    - Cleaning shell history files
+    - Removing suspicious scheduled tasks
+    - Terminating suspicious network connections
+    - Cleaning Windows registry entries
+    - Removing container artifacts
+    - Terminating suspicious processes
     """
     typer.echo(f"🧹 Cleaning artifacts (Profile: {profile.value})")
     clean_artifacts(dry_run, force, profile.value, target_user, artifacts)
@@ -68,7 +106,15 @@ def report(
     scan_results: Optional[str] = typer.Option(None, "--scan-results", help="Path to scan results JSON file")
 ):
     """
-    Generate a report of findings and cleanup actions
+    Generate a report of findings and cleanup actions.
+    
+    This command creates detailed reports in various formats:
+    - TXT: Simple text report
+    - JSON: Structured data for further processing
+    - HTML: Rich formatted report with categorized sections
+    - PDF: Professional document with tables and summaries
+    
+    Reports include all detected artifacts, cleanup actions, and a summary.
     """
     typer.echo(f"📊 Generating report in {output_format.value} format")
     generate_report(output_format.value, output_file, scan_results)
@@ -79,6 +125,11 @@ def help():
     """
     Show detailed help information about RedTriage
     """
+    show_detailed_help()
+
+
+def show_detailed_help():
+    """Function to display detailed help information"""
     console.print(Panel.fit(
         "[bold red]RedTriage[/bold red] - A tool for red teamers to clean up artifacts after engagements",
         title="About",
@@ -233,6 +284,34 @@ def help():
     detects_table.add_row(
         "Scheduled Tasks", 
         "Suspicious scheduled tasks or cron jobs"
+    )
+    detects_table.add_row(
+        "Network Connections", 
+        "Suspicious network connections, unusual ports, and tunneling traffic"
+    )
+    detects_table.add_row(
+        "Firewall Rules", 
+        "Modified firewall rules that may allow backdoor access"
+    )
+    detects_table.add_row(
+        "Proxy Settings", 
+        "Suspicious proxy configurations that may redirect traffic"
+    )
+    detects_table.add_row(
+        "VPN Connections", 
+        "Active VPN connections that might be used for exfiltration"
+    )
+    detects_table.add_row(
+        "Registry Artifacts", 
+        "Windows registry entries for persistence or backdoor access"
+    )
+    detects_table.add_row(
+        "Container Artifacts", 
+        "Suspicious container configurations or images"
+    )
+    detects_table.add_row(
+        "Process Artifacts", 
+        "Unusual running processes or memory-resident malware"
     )
     console.print(detects_table)
     
