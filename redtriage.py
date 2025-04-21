@@ -70,6 +70,12 @@ def scan(
     - Windows registry entries
     - Container and process artifacts
     """
+    # Print header with creator name
+    console.print("\n[bold red]RedTriage[/bold red] - Scanning", highlight=False)
+    console.print("[bold]Created by:[/bold] Zarni (Neo)", highlight=False)
+    console.print("[bold]Version:[/bold] 1.0.0", highlight=False)
+    console.print("=" * 60, highlight=False)
+    
     typer.echo(f"🔍 Scanning for artifacts (Profile: {profile.value})")
     scan_artifacts(dry_run, profile.value, target_user, locations)
 
@@ -95,6 +101,12 @@ def clean(
     - Removing container artifacts
     - Terminating suspicious processes
     """
+    # Print header with creator name
+    console.print("\n[bold red]RedTriage[/bold red] - Cleanup", highlight=False)
+    console.print("[bold]Created by:[/bold] Zarni (Neo)", highlight=False)
+    console.print("[bold]Version:[/bold] 1.0.0", highlight=False)
+    console.print("=" * 60, highlight=False)
+    
     typer.echo(f"🧹 Cleaning artifacts (Profile: {profile.value})")
     clean_artifacts(dry_run, force, profile.value, target_user, artifacts)
 
@@ -116,6 +128,12 @@ def report(
     
     Reports include all detected artifacts, cleanup actions, and a summary.
     """
+    # Print header with creator name
+    console.print("\n[bold red]RedTriage[/bold red] - Reporting", highlight=False)
+    console.print("[bold]Created by:[/bold] Zarni (Neo)", highlight=False)
+    console.print("[bold]Version:[/bold] 1.0.0", highlight=False)
+    console.print("=" * 60, highlight=False)
+    
     typer.echo(f"📊 Generating report in {output_format.value} format")
     generate_report(output_format.value, output_file, scan_results)
 
@@ -130,198 +148,92 @@ def help():
 
 def show_detailed_help():
     """Function to display detailed help information"""
-    console.print(Panel.fit(
-        "[bold red]RedTriage[/bold red] - A tool for red teamers to clean up artifacts after engagements",
-        title="About",
-        border_style="red"
-    ))
+    console = Console()
     
-    console.print("\n[bold]OVERVIEW[/bold]")
-    console.print("""
-        RedTriage helps red teamers clean up traces after a penetration test or red team engagement.
-        It detects and cleans common artifacts left behind during engagements, and generates
-        comprehensive reports to document findings and actions taken.
-    """)
+    # Title and creator
+    console.print("\n[bold red]RedTriage[/bold red] - A tool for red teamers to clean up artifacts", highlight=False)
+    console.print("[bold]Created by:[/bold] Zarni (Neo)", highlight=False)
+    console.print("[bold]Version:[/bold] 1.0.0", highlight=False)
+    console.print("\n" + "="*60, highlight=False)  # Separator
     
-    # Commands Table
-    console.print("\n[bold]COMMANDS[/bold]")
-    commands_table = Table(show_header=True, header_style="bold", box=box.SIMPLE)
-    commands_table.add_column("Command", style="cyan")
-    commands_table.add_column("Description")
-    commands_table.add_column("Example")
+    # Overview
+    console.print("\n[bold]OVERVIEW[/bold]", highlight=False)
+    console.print("RedTriage helps red teamers clean up traces after penetration tests.", highlight=False)
+    console.print("It detects and cleans artifacts left behind during engagements and", highlight=False)
+    console.print("generates comprehensive reports to document findings and actions.", highlight=False)
     
-    commands_table.add_row(
-        "scan", 
-        "Detect artifacts and tools used during engagements",
-        "./redtriage.py scan --profile paranoid"
-    )
-    commands_table.add_row(
-        "clean", 
-        "Clean up detected artifacts",
-        "./redtriage.py clean --dry-run"
-    )
-    commands_table.add_row(
-        "report", 
-        "Generate a report of findings and cleanup actions",
-        "./redtriage.py report --format html"
-    )
-    commands_table.add_row(
-        "help", 
-        "Show this help message",
-        "./redtriage.py help"
-    )
-    console.print(commands_table)
+    # Commands
+    console.print("\n[bold]COMMANDS[/bold]", highlight=False)
+    console.print("\n[cyan]scan[/cyan] - Detect artifacts and tools used during engagements", highlight=False)
+    console.print("  Example: ./redtriage.py scan --profile paranoid", highlight=False)
     
-    # Profiles Table
-    console.print("\n[bold]PROFILES[/bold]")
-    profiles_table = Table(show_header=True, header_style="bold", box=box.SIMPLE)
-    profiles_table.add_column("Profile", style="cyan")
-    profiles_table.add_column("Description")
+    console.print("\n[cyan]clean[/cyan] - Clean up detected artifacts", highlight=False)
+    console.print("  Example: ./redtriage.py clean --dry-run", highlight=False)
     
-    profiles_table.add_row(
-        "minimal", 
-        "Basic checks and cleanup actions, minimal disruption"
-    )
-    profiles_table.add_row(
-        "standard", 
-        "Default level - comprehensive but conservative scans and cleanup"
-    )
-    profiles_table.add_row(
-        "paranoid", 
-        "Aggressive checks and cleanup (may produce false positives)"
-    )
-    console.print(profiles_table)
+    console.print("\n[cyan]report[/cyan] - Generate a report of findings and cleanup actions", highlight=False)
+    console.print("  Example: ./redtriage.py report --format html", highlight=False)
+    
+    console.print("\n[cyan]help[/cyan] - Show this help message", highlight=False)
+    console.print("  Example: ./redtriage.py help", highlight=False)
+    
+    # Profiles
+    console.print("\n" + "="*60, highlight=False)  # Separator
+    console.print("\n[bold]PROFILES[/bold]", highlight=False)
+    
+    console.print("\n[cyan]minimal[/cyan] - Basic checks and cleanup actions, minimal disruption", highlight=False)
+    console.print("\n[cyan]standard[/cyan] - Default level - comprehensive but conservative scans", highlight=False)
+    console.print("\n[cyan]paranoid[/cyan] - Aggressive checks and cleanup (may produce false positives)", highlight=False)
     
     # Common Options
-    console.print("\n[bold]COMMON OPTIONS[/bold]")
-    options_table = Table(show_header=True, header_style="bold", box=box.SIMPLE)
-    options_table.add_column("Option", style="cyan")
-    options_table.add_column("Description")
+    console.print("\n" + "="*60, highlight=False)  # Separator
+    console.print("\n[bold]COMMON OPTIONS[/bold]", highlight=False)
     
-    options_table.add_row(
-        "--dry-run", 
-        "Show what would be done without actually doing it"
-    )
-    options_table.add_row(
-        "--profile", 
-        "Level of scanning/cleanup to perform: minimal, standard, or paranoid"
-    )
-    options_table.add_row(
-        "--target-user", 
-        "Specific user to target (e.g., only clean a specific user's files)"
-    )
-    console.print(options_table)
+    console.print("\n[cyan]--dry-run[/cyan] - Show what would be done without actually doing it", highlight=False)
+    console.print("\n[cyan]--profile[/cyan] - Level of scanning/cleanup (minimal, standard, paranoid)", highlight=False)
+    console.print("\n[cyan]--target-user[/cyan] - Specific user to target", highlight=False)
     
     # Command-specific options
-    console.print("\n[bold]COMMAND-SPECIFIC OPTIONS[/bold]")
+    console.print("\n" + "="*60, highlight=False)  # Separator
+    console.print("\n[bold]COMMAND-SPECIFIC OPTIONS[/bold]", highlight=False)
     
-    # Scan options
-    console.print("\n[cyan]scan[/cyan] options:")
-    scan_table = Table(show_header=True, header_style="bold", box=box.SIMPLE)
-    scan_table.add_column("Option", style="cyan")
-    scan_table.add_column("Description")
+    # Scan command options
+    console.print("\n[bold]scan[/bold] options:", highlight=False)
+    console.print("  [cyan]--locations[/cyan] - Specific locations to scan (space-separated)", highlight=False)
     
-    scan_table.add_row(
-        "--locations", 
-        "Specific locations to scan (space-separated list of directories)"
-    )
-    console.print(scan_table)
+    # Clean command options
+    console.print("\n[bold]clean[/bold] options:", highlight=False)
+    console.print("  [cyan]--force[/cyan] - Don't prompt before cleanup actions (use with caution!)", highlight=False)
+    console.print("  [cyan]--artifacts[/cyan] - Specific artifacts to clean (space-separated list)", highlight=False)
     
-    # Clean options
-    console.print("\n[cyan]clean[/cyan] options:")
-    clean_table = Table(show_header=True, header_style="bold", box=box.SIMPLE)
-    clean_table.add_column("Option", style="cyan")
-    clean_table.add_column("Description")
-    
-    clean_table.add_row(
-        "--force", 
-        "Don't prompt before cleanup actions (use with caution!)"
-    )
-    clean_table.add_row(
-        "--artifacts", 
-        "Specific artifacts to clean (space-separated list)"
-    )
-    console.print(clean_table)
-    
-    # Report options
-    console.print("\n[cyan]report[/cyan] options:")
-    report_table = Table(show_header=True, header_style="bold", box=box.SIMPLE)
-    report_table.add_column("Option", style="cyan")
-    report_table.add_column("Description")
-    
-    report_table.add_row(
-        "--format", 
-        "Output format: txt, json, html, or pdf"
-    )
-    report_table.add_row(
-        "--output", 
-        "Output file path (default: auto-generated filename)"
-    )
-    report_table.add_row(
-        "--scan-results", 
-        "Path to scan results JSON file (default: use most recent scan results)"
-    )
-    console.print(report_table)
+    # Report command options
+    console.print("\n[bold]report[/bold] options:", highlight=False)
+    console.print("  [cyan]--format[/cyan] - Output format: txt, json, html, or pdf", highlight=False)
+    console.print("  [cyan]--output[/cyan] - Output file path (default: auto-generated filename)", highlight=False)
+    console.print("  [cyan]--scan-results[/cyan] - Path to scan results JSON file", highlight=False)
     
     # What RedTriage detects
-    console.print("\n[bold]WHAT REDTRIAGE DETECTS[/bold]")
-    detects_table = Table(show_header=True, header_style="bold", box=box.SIMPLE)
-    detects_table.add_column("Category", style="cyan")
-    detects_table.add_column("Description")
+    console.print("\n" + "="*60, highlight=False)  # Separator
+    console.print("\n[bold]WHAT REDTRIAGE DETECTS[/bold]", highlight=False)
     
-    detects_table.add_row(
-        "Suspicious Files", 
-        "Files related to common red team tools (mimikatz, nc, chisel, etc.)"
-    )
-    detects_table.add_row(
-        "Modified Configs", 
-        "Recently modified configuration files (sshd_config, hosts, etc.)"
-    )
-    detects_table.add_row(
-        "Shell Histories", 
-        "Suspicious commands in shell history files"
-    )
-    detects_table.add_row(
-        "Scheduled Tasks", 
-        "Suspicious scheduled tasks or cron jobs"
-    )
-    detects_table.add_row(
-        "Network Connections", 
-        "Suspicious network connections, unusual ports, and tunneling traffic"
-    )
-    detects_table.add_row(
-        "Firewall Rules", 
-        "Modified firewall rules that may allow backdoor access"
-    )
-    detects_table.add_row(
-        "Proxy Settings", 
-        "Suspicious proxy configurations that may redirect traffic"
-    )
-    detects_table.add_row(
-        "VPN Connections", 
-        "Active VPN connections that might be used for exfiltration"
-    )
-    detects_table.add_row(
-        "Registry Artifacts", 
-        "Windows registry entries for persistence or backdoor access"
-    )
-    detects_table.add_row(
-        "Container Artifacts", 
-        "Suspicious container configurations or images"
-    )
-    detects_table.add_row(
-        "Process Artifacts", 
-        "Unusual running processes or memory-resident malware"
-    )
-    console.print(detects_table)
+    console.print("\n[cyan]Suspicious Files[/cyan] - Files related to common red team tools", highlight=False)
+    console.print("[cyan]Modified Configs[/cyan] - Recently modified configuration files", highlight=False)
+    console.print("[cyan]Shell Histories[/cyan] - Suspicious commands in shell history", highlight=False)
+    console.print("[cyan]Scheduled Tasks[/cyan] - Suspicious scheduled tasks or cron jobs", highlight=False)
+    console.print("[cyan]Network Connections[/cyan] - Suspicious network connections", highlight=False)
+    console.print("[cyan]Firewall Rules[/cyan] - Modified firewall rules that may allow backdoor access", highlight=False)
+    console.print("[cyan]Proxy Settings[/cyan] - Suspicious proxy configurations", highlight=False)
+    console.print("[cyan]VPN Connections[/cyan] - Active VPN connections that might be used for exfiltration", highlight=False)
+    console.print("[cyan]Registry Artifacts[/cyan] - Windows registry entries for persistence", highlight=False)
+    console.print("[cyan]Container Artifacts[/cyan] - Suspicious container configurations or images", highlight=False)
+    console.print("[cyan]Process Artifacts[/cyan] - Unusual running processes or memory-resident malware", highlight=False)
     
     # Warning
-    console.print("\n[bold red]WARNING[/bold red]")
-    console.print("""
-        This tool is designed for legitimate use by authorized red teamers during or after engagements.
-        Improper use could result in data loss or system issues. Always use with caution and proper
-        authorization. Running with elevated privileges is recommended for full functionality.
-    """)
+    console.print("\n" + "="*60, highlight=False)  # Separator
+    console.print("\n[bold red]WARNING[/bold red]", highlight=False)
+    console.print("This tool is designed for legitimate use by authorized red teamers.", highlight=False)
+    console.print("Improper use could result in data loss or system issues.", highlight=False)
+    console.print("Always use with caution and proper authorization.", highlight=False)
+    console.print("Running with elevated privileges is recommended for full functionality.", highlight=False)
 
 
 if __name__ == "__main__":

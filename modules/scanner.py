@@ -1228,32 +1228,57 @@ def scan_artifacts(dry_run: bool, profile: str, target_user: Optional[str] = Non
     with open(output_file, 'w') as f:
         json.dump(scanner.findings, f, indent=2)
     
-    print(f"\nScan complete! Results saved to {output_file}")
+    from rich.console import Console
+    console = Console()
     
-    # Print summary
-    print("\n=== Scan Summary ===")
-    print(f"Suspicious files: {len(scanner.findings['suspicious_files'])}")
-    print(f"Modified configs: {len(scanner.findings['modified_configs'])}")
-    print(f"Shell histories with suspicious commands: {len(scanner.findings['shell_histories'])}")
-    print(f"Suspicious scheduled tasks: {len(scanner.findings['scheduled_tasks'])}")
+    # Print summary header
+    console.print("\n[bold]SCAN COMPLETE[/bold]", highlight=False)
+    console.print(f"Results saved to: [cyan]{output_file}[/cyan]", highlight=False)
     
-    # Add network-related summary items
+    # Separator
+    console.print("\n" + "="*60, highlight=False)
+    
+    # Print main summary with clear category headers
+    console.print("\n[bold]SCAN SUMMARY[/bold]", highlight=False)
+    
+    # File system artifacts
+    console.print("\n[bold]File System:[/bold]", highlight=False)
+    console.print(f"🔍 Suspicious files: [cyan]{len(scanner.findings['suspicious_files'])}", highlight=False)
+    console.print(f"🔍 Modified configs: [cyan]{len(scanner.findings['modified_configs'])}", highlight=False)
+    console.print(f"🔍 Shell histories with suspicious commands: [cyan]{len(scanner.findings['shell_histories'])}", highlight=False)
+    
+    # Scheduled tasks
+    console.print("\n[bold]Scheduled Tasks:[/bold]", highlight=False)
+    console.print(f"🔍 Suspicious scheduled tasks: [cyan]{len(scanner.findings['scheduled_tasks'])}", highlight=False)
+    
+    # Network artifacts
+    console.print("\n[bold]Network:[/bold]", highlight=False)
     if "suspicious_network" in scanner.findings:
-        print(f"Suspicious network connections: {len(scanner.findings['suspicious_network'])}")
+        console.print(f"🔍 Suspicious network connections: [cyan]{len(scanner.findings['suspicious_network'])}", highlight=False)
     if "listening_ports" in scanner.findings:
-        print(f"Unusual listening ports: {len(scanner.findings['listening_ports'])}")
+        console.print(f"🔍 Unusual listening ports: [cyan]{len(scanner.findings['listening_ports'])}", highlight=False)
     if "firewall_modifications" in scanner.findings:
-        print(f"Suspicious firewall rules: {len(scanner.findings['firewall_modifications'])}")
+        console.print(f"🔍 Suspicious firewall rules: [cyan]{len(scanner.findings['firewall_modifications'])}", highlight=False)
     if "proxy_settings" in scanner.findings:
-        print(f"Suspicious proxy settings: {len(scanner.findings['proxy_settings'])}")
+        console.print(f"🔍 Suspicious proxy settings: [cyan]{len(scanner.findings['proxy_settings'])}", highlight=False)
     if "vpn_connections" in scanner.findings:
-        print(f"Active VPN connections: {len(scanner.findings['vpn_connections'])}")
+        console.print(f"🔍 Active VPN connections: [cyan]{len(scanner.findings['vpn_connections'])}", highlight=False)
     if "ssh_connections" in scanner.findings:
-        print(f"Suspicious SSH connections: {len(scanner.findings['ssh_connections'])}")
+        console.print(f"🔍 Suspicious SSH connections: [cyan]{len(scanner.findings['ssh_connections'])}", highlight=False)
     
+    # Other artifacts
+    console.print("\n[bold]Other Artifacts:[/bold]", highlight=False)
     if "container_artifacts" in scanner.findings:
-        print(f"Suspicious container artifacts: {len(scanner.findings['container_artifacts'])}")
+        console.print(f"🔍 Suspicious container artifacts: [cyan]{len(scanner.findings['container_artifacts'])}", highlight=False)
     if "memory_artifacts" in scanner.findings:
-        print(f"Suspicious processes: {len(scanner.findings['memory_artifacts'])}")
+        console.print(f"🔍 Suspicious processes: [cyan]{len(scanner.findings['memory_artifacts'])}", highlight=False)
+    
+    # Windows-specific
+    if scanner.os == "Windows" and "registry_artifacts" in scanner.findings:
+        console.print("\n[bold]Windows-specific:[/bold]", highlight=False)
+        console.print(f"🔍 Registry artifacts: [cyan]{len(scanner.findings['registry_artifacts'])}", highlight=False)
+    
+    # Final note
+    console.print("\n[italic]Use 'redtriage.py clean' to clean these artifacts[/italic]", highlight=False)
     
     return scanner.findings 

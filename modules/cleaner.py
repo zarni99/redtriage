@@ -971,17 +971,44 @@ def clean_artifacts(dry_run: bool, force: bool, profile: str, target_user: Optio
     with open(output_file, 'w') as f:
         json.dump(cleaned_items, f, indent=2)
     
-    print(f"\nCleanup complete! Results saved to {output_file}")
+    from rich.console import Console
+    console = Console()
     
-    # Print summary
-    print("\n=== Cleanup Summary ===")
-    print(f"Cleaned files: {len(cleaner.cleaned_items['files'])}")
-    print(f"Cleaned histories: {len(cleaner.cleaned_items['histories'])}")
-    print(f"Cleaned scheduled tasks: {len(cleaner.cleaned_items['tasks'])}")
-    print(f"Restored config files: {len(cleaner.cleaned_items['configs'])}")
-    print(f"Terminated network connections: {len(cleaner.cleaned_items['network'])}")
-    print(f"Cleaned registry entries: {len(cleaner.cleaned_items['registry'])}")
-    print(f"Cleaned container artifacts: {len(cleaner.cleaned_items['containers'])}")
-    print(f"Terminated processes: {len(cleaner.cleaned_items['processes'])}")
+    # Print summary header
+    console.print("\n[bold]CLEANUP COMPLETE[/bold]", highlight=False)
+    console.print(f"Results saved to: [cyan]{output_file}[/cyan]", highlight=False)
+    
+    # Separator
+    console.print("\n" + "="*60, highlight=False)
+    
+    # Print main summary with clear category headers
+    console.print("\n[bold]CLEANUP SUMMARY[/bold]", highlight=False)
+    
+    # File system artifacts
+    console.print("\n[bold]File System:[/bold]", highlight=False)
+    console.print(f"🧹 Cleaned files: [cyan]{len(cleaner.cleaned_items['files'])}", highlight=False)
+    console.print(f"🧹 Cleaned shell histories: [cyan]{len(cleaner.cleaned_items['histories'])}", highlight=False)
+    console.print(f"🧹 Restored config files: [cyan]{len(cleaner.cleaned_items['configs'])}", highlight=False)
+    
+    # Scheduled tasks
+    console.print("\n[bold]Scheduled Tasks:[/bold]", highlight=False)
+    console.print(f"🧹 Cleaned scheduled tasks: [cyan]{len(cleaner.cleaned_items['tasks'])}", highlight=False)
+    
+    # Network artifacts
+    console.print("\n[bold]Network:[/bold]", highlight=False)
+    console.print(f"🧹 Terminated network connections: [cyan]{len(cleaner.cleaned_items['network'])}", highlight=False)
+    
+    # Other artifacts
+    console.print("\n[bold]Other Artifacts:[/bold]", highlight=False)
+    console.print(f"🧹 Cleaned container artifacts: [cyan]{len(cleaner.cleaned_items['containers'])}", highlight=False)
+    console.print(f"🧹 Terminated processes: [cyan]{len(cleaner.cleaned_items['processes'])}", highlight=False)
+    
+    # Windows-specific
+    if cleaner.os == "Windows":
+        console.print("\n[bold]Windows-specific:[/bold]", highlight=False)
+        console.print(f"🧹 Cleaned registry entries: [cyan]{len(cleaner.cleaned_items['registry'])}", highlight=False)
+    
+    # Final note
+    console.print("\n[italic]Use 'redtriage.py report' to generate a detailed report[/italic]", highlight=False)
     
     return cleaned_items 
