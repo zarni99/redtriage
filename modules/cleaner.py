@@ -39,6 +39,189 @@ class Cleaner:
             "processes": [],
         }
     
+    def prompt_category(self, category: str, items: List[Dict[str, Any]], count: int) -> str:
+        """
+        First-tier prompt for a category of items.
+        Returns: 'y' (yes), 'n' (no), or 's' (selective)
+        """
+        prompt = f"Found {count} {category}. Clean them? [y/N/s] (Yes/No/Selective) "
+        while True:
+            response = input(prompt).strip().lower()
+            if response in ['y', 'n', 's', '']:
+                return 'n' if response == '' else response
+            print("Invalid response. Please enter 'y', 'n', or 's'.")
+    
+    def prompt_selection_mode(self, category: str) -> str:
+        """
+        Second-tier prompt for selection mode.
+        Returns: 'a' (all), 'n' (none), 'i' (interactive), 'r' (range), or 'f' (filter)
+        """
+        print(f"\nSelect action for {category}:")
+        print("[a]ll - Clean all items in this category")
+        print("[n]one - Skip all items in this category")
+        print("[i]nteractive - Individually select which items to clean")
+        print("[r]ange - Specify numeric ranges to clean")
+        print("[f]ilter - Filter by pattern")
+        
+        while True:
+            response = input("Selection mode [a/n/i/r/f]: ").strip().lower()
+            if response in ['a', 'n', 'i', 'r', 'f']:
+                return response
+            print("Invalid response. Please enter 'a', 'n', 'i', 'r', or 'f'.")
+    
+    def select_items_interactive(self, items: List[Dict[str, Any]], item_formatter=None) -> List[int]:
+        """
+        Present interactive selection interface and return indices of selected items.
+        item_formatter: A function to format an item for display
+        """
+        # Function to format items if no custom formatter provided
+        if item_formatter is None:
+            def item_formatter(item, idx):
+                if "path" in item:
+                    return f"{idx+1}. {item['path']}"
+                elif "name" in item:
+                    return f"{idx+1}. {item['name']}"
+                else:
+                    return f"{idx+1}. Unknown item"
+        
+        # Initialize all items as selected
+        selected = set(range(len(items)))
+        
+        while True:
+            # Display items with selection status
+            print("\nCurrent selection:")
+            for i, item in enumerate(items):
+                status = "[X]" if i in selected else "[ ]"
+                print(f"{status} {item_formatter(item, i)}")
+            
+            # Display options
+            print("\nToggle items using numbers (e.g., 2,4,7-9), [a]ll, [n]one, or [d]one: ")
+            response = input().strip().lower()
+            
+            if response == 'a':
+                selected = set(range(len(items)))
+            elif response == 'n':
+                selected = set()
+            elif response == 'd':
+                return sorted(list(selected))
+            else:
+                # Parse ranges and individual numbers
+                try:
+                    parts = response.split(',')
+                    for part in parts:
+                        part = part.strip()
+                        if '-' in part:
+                            start, end = map(int, part.split('-'))
+                            # Convert to 0-indexed
+                            start = max(0, start - 1)
+                            end = min(len(items) - 1, end - 1)
+                            # Toggle selection for range
+                            for i in range(start, end + 1):
+                                if i in selected:
+                                    selected.remove(i)
+                                else:
+                                    selected.add(i)
+                        else:
+                            idx = int(part) - 1  # Convert to 0-indexed
+                            if 0 <= idx < len(items):
+                                if idx in selected:
+                                    selected.remove(idx)
+                                else:
+                                    selected.add(idx)
+                except ValueError:
+                    print("Invalid format. Use numbers, ranges (e.g., 1-5), or commands.")
+    
+    def select_items_range(self, count: int) -> List[int]:
+        """
+        Prompt user for a range of items and return indices.
+        """
+        while True:
+            print(f"\nEnter range of items to clean (e.g., 1-5,8,10-15) (1-{count}): ")
+            response = input().strip()
+            
+            try:
+                selected = set()
+                parts = response.split(',')
+                for part in parts:
+                    part = part.strip()
+                    if '-' in part:
+                        start, end = map(int, part.split('-'))
+                        # Convert to 0-indexed
+                        start = max(0, start - 1)
+                        end = min(count - 1, end - 1)
+                        for i in range(start, end + 1):
+                            selected.add(i)
+                    else:
+                        idx = int(part) - 1  # Convert to 0-indexed
+                        if 0 <= idx < count:
+                            selected.add(idx)
+                
+                return sorted(list(selected))
+            except ValueError:
+                print("Invalid format. Use numbers, ranges (e.g., 1-5), or commands.")
+    
+    def select_items_filter(self, items: List[Dict[str, Any]]) -> List[int]:
+        """
+        Filter items by pattern and return indices of matching items.
+        """
+        import fnmatch
+        
+        while True:
+            print("\nEnter pattern to match (shell wildcards supported): ")
+            pattern = input().strip()
+            
+            try:
+                matched = []
+                for i, item in enumerate(items):
+                    if "path" in item and fnmatch.fnmatch(item["path"].lower(), pattern.lower()):
+                        matched.append(i)
+                    elif "name" in item and fnmatch.fnmatch(item["name"].lower(), pattern.lower()):
+                        matched.append(i)
+                
+                if matched:
+                    print(f"Selected {len(matched)} items matching '{pattern}'")
+                    return matched
+                else:
+                    print(f"No items matched the pattern '{pattern}'. Try again.")
+            except Exception as e:
+                print(f"Error in pattern matching: {e}. Try again.")
+    
+    def get_selected_items(self, category: str, items: List[Dict[str, Any]], item_formatter=None) -> List[int]:
+        """
+        Handle the entire tiered selection process for a category.
+        Returns indices of items to clean.
+        """
+        if self.force:
+            # If --force is specified, clean all items
+            return list(range(len(items)))
+        
+        # First-tier prompt: category level
+        response = self.prompt_category(category, items, len(items))
+        
+        if response == 'y':
+            # Clean all items
+            return list(range(len(items)))
+        elif response == 'n':
+            # Skip all items
+            return []
+        elif response == 's':
+            # Second-tier prompt: selection mode
+            mode = self.prompt_selection_mode(category)
+            
+            if mode == 'a':
+                return list(range(len(items)))
+            elif mode == 'n':
+                return []
+            elif mode == 'i':
+                return self.select_items_interactive(items, item_formatter)
+            elif mode == 'r':
+                return self.select_items_range(len(items))
+            elif mode == 'f':
+                return self.select_items_filter(items)
+        
+        # Default is to clean nothing
+        return []
+    
     def expand_path(self, path: str) -> str:
         """Expand user and environment variables in a path"""
         expanded = os.path.expanduser(path)
@@ -113,17 +296,48 @@ class Cleaner:
         
     def clean_all_suspicious_files(self, suspicious_files: List[Dict[str, Any]]) -> None:
         """Clean all suspicious files in the list"""
-        print(f"\n[*] Cleaning {len(suspicious_files)} suspicious files...")
+        if not suspicious_files:
+            return
+            
+        print(f"\n[*] Found {len(suspicious_files)} suspicious files...")
         
-        for file_info in suspicious_files:
+        # Skip prompting in dry-run mode with force flag
+        if self.dry_run and self.force:
+            for file_info in suspicious_files:
+                print(f"[DRY RUN] Would delete: {file_info.get('path', 'Unknown')}")
+                self.cleaned_items["files"].append(file_info)
+            return
+            
+        # Create a formatter function for better display
+        def file_formatter(file_info, idx):
+            path = file_info.get('path', 'Unknown')
+            reason = file_info.get('reason', 'Unknown reason')
+            size = file_info.get('size', 'Unknown size')
+            return f"{idx+1}. {path} ({size} bytes) - {reason}"
+            
+        # Get selected items using tiered prompting
+        selected_indices = self.get_selected_items("suspicious files", suspicious_files, file_formatter)
+        
+        if not selected_indices:
+            print("No files selected for cleaning.")
+            return
+            
+        print(f"Cleaning {len(selected_indices)} suspicious files...")
+        
+        # Process selected files
+        for idx in selected_indices:
+            file_info = suspicious_files[idx]
             if self.clean_suspicious_file(file_info):
                 self.cleaned_items["files"].append(file_info)
     
     def clean_shell_histories(self) -> None:
         """Clean shell history files"""
-        print("\n[*] Cleaning shell history files...")
+        print("\n[*] Checking shell history files...")
         
         history_files = SHELL_HISTORY_FILES.get(self.os, [])
+        existing_histories = []
+        
+        # First collect all existing history files
         for history_file in history_files:
             history_file = self.expand_path(history_file)
             
@@ -134,19 +348,51 @@ class Cleaner:
                 else:
                     history_file = history_file.replace("~", f"/home/{self.target_user}")
             
-            if not os.path.exists(history_file):
-                continue
-                
-            if not self.force:
-                prompt = f"Clean shell history file {history_file}? [y/N] "
-                response = input(prompt).strip().lower()
-                if response != 'y':
-                    print(f"Skipping history file: {history_file}")
-                    continue
+            if os.path.exists(history_file):
+                # Get file stats for display
+                stats = os.stat(history_file)
+                existing_histories.append({
+                    "path": history_file,
+                    "modified": datetime.fromtimestamp(stats.st_mtime).isoformat(),
+                    "size": stats.st_size
+                })
+        
+        if not existing_histories:
+            print("No shell history files found.")
+            return
+            
+        print(f"Found {len(existing_histories)} shell history files.")
+        
+        # Skip prompting in dry-run mode with force flag
+        if self.dry_run and self.force:
+            for history_info in existing_histories:
+                print(f"[DRY RUN] Would clean shell history: {history_info['path']}")
+                self.cleaned_items["histories"].append(history_info)
+            return
+            
+        # Create a formatter function for better display
+        def history_formatter(history_info, idx):
+            path = history_info.get('path', 'Unknown')
+            modified = history_info.get('modified', 'Unknown')
+            size = history_info.get('size', 0)
+            return f"{idx+1}. {path} (Size: {size} bytes, Modified: {modified})"
+            
+        # Get selected items using tiered prompting
+        selected_indices = self.get_selected_items("shell history files", existing_histories, history_formatter)
+        
+        if not selected_indices:
+            print("No shell histories selected for cleaning.")
+            return
+            
+        print(f"Cleaning {len(selected_indices)} shell history files...")
+        
+        # Process selected histories
+        for idx in selected_indices:
+            history_file = existing_histories[idx]["path"]
             
             if self.dry_run:
                 print(f"[DRY RUN] Would clean shell history: {history_file}")
-                self.cleaned_items["histories"].append({"path": history_file})
+                self.cleaned_items["histories"].append(existing_histories[idx])
                 continue
                 
             try:
@@ -156,14 +402,14 @@ class Cleaner:
                         # Create an empty file
                         with open(history_file, 'w') as f:
                             pass
-                        self.cleaned_items["histories"].append({"path": history_file})
+                        self.cleaned_items["histories"].append(existing_histories[idx])
                 else:
                     # For other profiles, just empty the file
                     with open(history_file, 'w') as f:
                         pass
                     
                     print(f"Cleaned shell history: {history_file}")
-                    self.cleaned_items["histories"].append({"path": history_file})
+                    self.cleaned_items["histories"].append(existing_histories[idx])
                 
                 # If Linux/Darwin and not in dry run, also clear current shell history
                 if (self.os == "Linux" or self.os == "Darwin") and not self.dry_run:
@@ -249,17 +495,40 @@ class Cleaner:
     
     def clean_all_scheduled_tasks(self, tasks: List[Dict[str, Any]]) -> None:
         """Clean all suspicious scheduled tasks"""
-        print(f"\n[*] Cleaning {len(tasks)} suspicious scheduled tasks...")
-        
-        for task_info in tasks:
-            if not self.force:
-                task_id = task_info.get("name", task_info.get("path", "Unknown task"))
-                prompt = f"Remove scheduled task {task_id}? [y/N] "
-                response = input(prompt).strip().lower()
-                if response != 'y':
-                    print(f"Skipping task: {task_id}")
-                    continue
+        if not tasks:
+            return
             
+        print(f"\n[*] Found {len(tasks)} suspicious scheduled tasks...")
+        
+        # Skip prompting in dry-run mode with force flag
+        if self.dry_run and self.force:
+            for task_info in tasks:
+                task_id = task_info.get("name", task_info.get("path", "Unknown task"))
+                print(f"[DRY RUN] Would remove task: {task_id}")
+                self.cleaned_items["tasks"].append(task_info)
+            return
+            
+        # Create a formatter function for better display
+        def task_formatter(task_info, idx):
+            if "name" in task_info:
+                return f"{idx+1}. {task_info['name']} - {task_info.get('reason', 'Unknown reason')}"
+            elif "path" in task_info:
+                return f"{idx+1}. {task_info['path']} - {task_info.get('reason', 'Unknown reason')}"
+            else:
+                return f"{idx+1}. Unknown task"
+                
+        # Get selected items using tiered prompting
+        selected_indices = self.get_selected_items("suspicious scheduled tasks", tasks, task_formatter)
+        
+        if not selected_indices:
+            print("No scheduled tasks selected for cleaning.")
+            return
+            
+        print(f"Cleaning {len(selected_indices)} suspicious scheduled tasks...")
+        
+        # Process selected tasks
+        for idx in selected_indices:
+            task_info = tasks[idx]
             if self.remove_scheduled_task(task_info):
                 self.cleaned_items["tasks"].append(task_info)
     
@@ -304,9 +573,36 @@ class Cleaner:
     
     def clean_all_config_files(self, configs: List[Dict[str, Any]]) -> None:
         """Clean all modified config files"""
-        print(f"\n[*] Cleaning {len(configs)} modified config files...")
+        if not configs:
+            return
+            
+        print(f"\n[*] Found {len(configs)} modified configuration files...")
         
-        for config_info in configs:
+        # Skip prompting in dry-run mode with force flag
+        if self.dry_run and self.force:
+            for config_info in configs:
+                print(f"[DRY RUN] Would restore config file: {config_info.get('path', 'Unknown')}")
+                self.cleaned_items["configs"].append(config_info)
+            return
+            
+        # Create a formatter function for better display
+        def config_formatter(config_info, idx):
+            path = config_info.get('path', 'Unknown')
+            modified = config_info.get('modified', 'Unknown date')
+            return f"{idx+1}. {path} (Modified: {modified})"
+            
+        # Get selected items using tiered prompting
+        selected_indices = self.get_selected_items("modified configuration files", configs, config_formatter)
+        
+        if not selected_indices:
+            print("No configuration files selected for restoration.")
+            return
+            
+        print(f"Restoring {len(selected_indices)} modified configuration files...")
+        
+        # Process selected configs
+        for idx in selected_indices:
+            config_info = configs[idx]
             if self.restore_config_file(config_info):
                 self.cleaned_items["configs"].append(config_info)
     
@@ -315,23 +611,44 @@ class Cleaner:
         if not network_items:
             return
             
-        print(f"\n[*] Cleaning {len(network_items)} suspicious network connections...")
+        print(f"\n[*] Found {len(network_items)} suspicious network connections...")
         
-        for item in network_items:
-            if not self.force:
-                prompt = f"Terminate process with PID {item['pid']} ({item.get('process', 'Unknown')})? [y/N] "
-                response = input(prompt).strip().lower()
-                if response != 'y':
-                    print(f"Skipping process: {item['pid']}")
-                    continue
-            
-            if self.dry_run:
-                print(f"[DRY RUN] Would terminate process: {item['pid']}")
+        # Skip prompting in dry-run mode with force flag
+        if self.dry_run and self.force:
+            for item in network_items:
+                print(f"[DRY RUN] Would terminate process: {item.get('pid', 'Unknown')} ({item.get('process', 'Unknown')})")
                 self.cleaned_items["network"].append(item)
-                continue
-                
+            return
+            
+        # Create a formatter function for better display
+        def network_formatter(item, idx):
+            pid = item.get('pid', 'Unknown')
+            process = item.get('process', 'Unknown')
+            protocol = item.get('protocol', 'Unknown')
+            local = item.get('local_address', 'Unknown')
+            remote = item.get('remote_address', 'Unknown')
+            reason = item.get('reason', 'Unknown reason')
+            return f"{idx+1}. {process} (PID: {pid}) - {protocol} {local} → {remote} - {reason}"
+            
+        # Get selected items using tiered prompting
+        selected_indices = self.get_selected_items("suspicious network connections", network_items, network_formatter)
+        
+        if not selected_indices:
+            print("No network connections selected for termination.")
+            return
+            
+        print(f"Terminating {len(selected_indices)} suspicious network connections...")
+        
+        # Process selected network connections
+        for idx in selected_indices:
+            item = network_items[idx]
             try:
                 # Terminate the process
+                if self.dry_run:
+                    print(f"[DRY RUN] Would terminate process: {item['pid']}")
+                    self.cleaned_items["network"].append(item)
+                    continue
+                    
                 if self.os == "Windows":
                     result = subprocess.run(
                         ["taskkill", "/F", "/PID", item["pid"]],
@@ -356,26 +673,46 @@ class Cleaner:
         if self.os != "Windows" or not registry_items:
             return
             
-        print(f"\n[*] Cleaning {len(registry_items)} suspicious registry entries...")
+        print(f"\n[*] Found {len(registry_items)} suspicious registry entries...")
         
-        for item in registry_items:
+        # Skip prompting in dry-run mode with force flag
+        if self.dry_run and self.force:
+            for item in registry_items:
+                key = item["key"]
+                value_name = item["value_name"]
+                print(f"[DRY RUN] Would delete registry value: {key}\\{value_name}")
+                self.cleaned_items["registry"].append(item)
+            return
+            
+        # Create a formatter function for better display
+        def registry_formatter(item, idx):
+            key = item.get('key', 'Unknown')
+            value_name = item.get('value_name', 'Unknown')
+            reason = item.get('reason', 'Unknown reason')
+            return f"{idx+1}. {key}\\{value_name} - {reason}"
+            
+        # Get selected items using tiered prompting
+        selected_indices = self.get_selected_items("suspicious registry entries", registry_items, registry_formatter)
+        
+        if not selected_indices:
+            print("No registry entries selected for cleaning.")
+            return
+            
+        print(f"Cleaning {len(selected_indices)} suspicious registry entries...")
+        
+        # Process selected registry entries
+        for idx in selected_indices:
+            item = registry_items[idx]
             key = item["key"]
             value_name = item["value_name"]
             
-            if not self.force:
-                prompt = f"Delete registry value {key}\\{value_name}? [y/N] "
-                response = input(prompt).strip().lower()
-                if response != 'y':
-                    print(f"Skipping registry value: {key}\\{value_name}")
-                    continue
-            
-            if self.dry_run:
-                print(f"[DRY RUN] Would delete registry value: {key}\\{value_name}")
-                self.cleaned_items["registry"].append(item)
-                continue
-                
             try:
                 # Delete the registry value
+                if self.dry_run:
+                    print(f"[DRY RUN] Would delete registry value: {key}\\{value_name}")
+                    self.cleaned_items["registry"].append(item)
+                    continue
+                    
                 result = subprocess.run(
                     ["reg", "delete", key, "/v", value_name, "/f"],
                     capture_output=True, text=True, check=False
@@ -394,20 +731,50 @@ class Cleaner:
         if not container_items:
             return
             
-        print(f"\n[*] Cleaning {len(container_items)} suspicious container artifacts...")
+        print(f"\n[*] Found {len(container_items)} suspicious container artifacts...")
         
-        for item in container_items:
+        # Skip prompting in dry-run mode with force flag
+        if self.dry_run and self.force:
+            for item in container_items:
+                if "container_id" in item:
+                    name = item.get("name", "Unknown")
+                    container_id = item.get("container_id", "Unknown")
+                    print(f"[DRY RUN] Would stop and remove container: {name} ({container_id})")
+                else:
+                    print(f"[DRY RUN] Would remove container config: {item.get('path', 'Unknown')}")
+                self.cleaned_items["containers"].append(item)
+            return
+            
+        # Create a formatter function for better display
+        def container_formatter(item, idx):
+            if "container_id" in item:
+                name = item.get("name", "Unknown")
+                container_id = item.get("container_id", "Unknown")
+                image = item.get("image", "Unknown")
+                reason = item.get("reason", "Unknown reason")
+                return f"{idx+1}. Container: {name} ({container_id}) - Image: {image} - {reason}"
+            else:
+                path = item.get("path", "Unknown")
+                type_info = item.get("type", "Unknown type")
+                reason = item.get("reason", "Unknown reason")
+                return f"{idx+1}. Config: {path} - Type: {type_info} - {reason}"
+            
+        # Get selected items using tiered prompting
+        selected_indices = self.get_selected_items("suspicious container artifacts", container_items, container_formatter)
+        
+        if not selected_indices:
+            print("No container artifacts selected for cleaning.")
+            return
+            
+        print(f"Cleaning {len(selected_indices)} suspicious container artifacts...")
+        
+        # Process selected container artifacts
+        for idx in selected_indices:
+            item = container_items[idx]
             if "container_id" in item:
                 # This is a container
                 container_id = item["container_id"]
                 name = item.get("name", "Unknown")
-                
-                if not self.force:
-                    prompt = f"Stop and remove container {name} ({container_id})? [y/N] "
-                    response = input(prompt).strip().lower()
-                    if response != 'y':
-                        print(f"Skipping container: {name}")
-                        continue
                 
                 if self.dry_run:
                     print(f"[DRY RUN] Would stop and remove container: {name} ({container_id})")
@@ -438,13 +805,6 @@ class Cleaner:
                 # This is a container configuration file
                 filepath = item["path"]
                 
-                if not self.force:
-                    prompt = f"Delete container configuration file {filepath}? [y/N] "
-                    response = input(prompt).strip().lower()
-                    if response != 'y':
-                        print(f"Skipping file: {filepath}")
-                        continue
-                
                 # Use the secure delete method from files
                 if self.secure_delete_file(filepath):
                     self.cleaned_items["containers"].append(item)
@@ -454,26 +814,52 @@ class Cleaner:
         if not memory_items:
             return
             
-        print(f"\n[*] Cleaning {len(memory_items)} suspicious processes...")
+        print(f"\n[*] Found {len(memory_items)} suspicious processes...")
         
-        for item in memory_items:
+        # Skip prompting in dry-run mode with force flag
+        if self.dry_run and self.force:
+            for item in memory_items:
+                pid = item["pid"]
+                process_name = item["process_name"]
+                print(f"[DRY RUN] Would terminate process: {process_name} (PID: {pid})")
+                self.cleaned_items["processes"].append(item)
+            return
+            
+        # Create a formatter function for better display
+        def process_formatter(item, idx):
+            pid = item.get('pid', 'Unknown')
+            process_name = item.get('process_name', 'Unknown')
+            cmdline = item.get('command_line', '')
+            reason = item.get('reason', 'Unknown reason')
+            
+            # Truncate command line if too long
+            if len(cmdline) > 50:
+                cmdline = cmdline[:47] + "..."
+                
+            return f"{idx+1}. {process_name} (PID: {pid}) - {cmdline} - {reason}"
+            
+        # Get selected items using tiered prompting
+        selected_indices = self.get_selected_items("suspicious processes", memory_items, process_formatter)
+        
+        if not selected_indices:
+            print("No processes selected for termination.")
+            return
+            
+        print(f"Terminating {len(selected_indices)} suspicious processes...")
+        
+        # Process selected processes
+        for idx in selected_indices:
+            item = memory_items[idx]
             pid = item["pid"]
             process_name = item["process_name"]
             
-            if not self.force:
-                prompt = f"Terminate process {process_name} (PID: {pid})? [y/N] "
-                response = input(prompt).strip().lower()
-                if response != 'y':
-                    print(f"Skipping process: {process_name}")
-                    continue
-            
-            if self.dry_run:
-                print(f"[DRY RUN] Would terminate process: {process_name} (PID: {pid})")
-                self.cleaned_items["processes"].append(item)
-                continue
-                
             try:
                 # Terminate the process
+                if self.dry_run:
+                    print(f"[DRY RUN] Would terminate process: {process_name} (PID: {pid})")
+                    self.cleaned_items["processes"].append(item)
+                    continue
+                    
                 if self.os == "Windows":
                     result = subprocess.run(
                         ["taskkill", "/F", "/PID", pid],
