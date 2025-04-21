@@ -1,0 +1,3 @@
+"""
+RedTriage modules package
+""" 
