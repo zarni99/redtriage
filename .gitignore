@@ -1,0 +1,30 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Distribution / packaging
+dist/
+build/
+*.egg-info/
+
+# Virtual environments
+venv/
+env/
+ENV/
+
+# Scan and cleanup results
+redtriage_scan_*.json
+redtriage_cleanup_*.json
+redtriage_report_*.txt
+redtriage_report_*.json
+redtriage_report_*.html
+
+# Local configuration
+.env
+.vscode/
+.idea/
+
+# OS specific files
+.DS_Store
+Thumbs.db 
