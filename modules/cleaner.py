@@ -593,5 +593,9 @@ def clean_artifacts(dry_run: bool, force: bool, profile: str, target_user: Optio
     print(f"Cleaned histories: {len(cleaner.cleaned_items['histories'])}")
     print(f"Cleaned scheduled tasks: {len(cleaner.cleaned_items['tasks'])}")
     print(f"Restored config files: {len(cleaner.cleaned_items['configs'])}")
+    print(f"Terminated network connections: {len(cleaner.cleaned_items['network'])}")
+    print(f"Cleaned registry entries: {len(cleaner.cleaned_items['registry'])}")
+    print(f"Cleaned container artifacts: {len(cleaner.cleaned_items['containers'])}")
+    print(f"Terminated processes: {len(cleaner.cleaned_items['processes'])}")
     
     return cleaned_items 

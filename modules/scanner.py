@@ -17,6 +17,9 @@ import subprocess
 from typing import List, Dict, Any, Optional, Tuple
 from datetime import datetime
 
+# Import network scanner
+from modules.network_scanner import scan_network_artifacts
+
 # Common red team tool names
 COMMON_TOOL_NAMES = [
     # Recon and scanning tools
@@ -1150,6 +1153,21 @@ class Scanner:
         # Scan for suspicious network connections
         self.scan_network_connections()
         
+        # Run comprehensive network scan
+        network_findings = scan_network_artifacts(self.dry_run, self.profile)
+        
+        # Incorporate network scan results
+        if network_findings and "suspicious_connections" in network_findings:
+            if "suspicious_network" not in self.findings:
+                self.findings["suspicious_network"] = []
+            self.findings["suspicious_network"].extend(network_findings["suspicious_connections"])
+        
+        # Add other network findings
+        for key in ["listening_ports", "dns_queries", "proxy_settings", "vpn_connections", 
+                   "ssh_connections", "firewall_modifications"]:
+            if key in network_findings and network_findings[key]:
+                self.findings[key] = network_findings[key]
+        
         # Scan Windows registry for suspicious entries
         if self.os == "Windows":
             self.scan_windows_registry()
@@ -1195,5 +1213,24 @@ def scan_artifacts(dry_run: bool, profile: str, target_user: Optional[str] = Non
     print(f"Modified configs: {len(scanner.findings['modified_configs'])}")
     print(f"Shell histories with suspicious commands: {len(scanner.findings['shell_histories'])}")
     print(f"Suspicious scheduled tasks: {len(scanner.findings['scheduled_tasks'])}")
+    
+    # Add network-related summary items
+    if "suspicious_network" in scanner.findings:
+        print(f"Suspicious network connections: {len(scanner.findings['suspicious_network'])}")
+    if "listening_ports" in scanner.findings:
+        print(f"Unusual listening ports: {len(scanner.findings['listening_ports'])}")
+    if "firewall_modifications" in scanner.findings:
+        print(f"Suspicious firewall rules: {len(scanner.findings['firewall_modifications'])}")
+    if "proxy_settings" in scanner.findings:
+        print(f"Suspicious proxy settings: {len(scanner.findings['proxy_settings'])}")
+    if "vpn_connections" in scanner.findings:
+        print(f"Active VPN connections: {len(scanner.findings['vpn_connections'])}")
+    if "ssh_connections" in scanner.findings:
+        print(f"Suspicious SSH connections: {len(scanner.findings['ssh_connections'])}")
+    
+    if "container_artifacts" in scanner.findings:
+        print(f"Suspicious container artifacts: {len(scanner.findings['container_artifacts'])}")
+    if "memory_artifacts" in scanner.findings:
+        print(f"Suspicious processes: {len(scanner.findings['memory_artifacts'])}")
     
     return scanner.findings 
