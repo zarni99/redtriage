@@ -368,12 +368,17 @@ class Scanner:
             cron_locations = [
                 "/etc/crontab",
                 "/etc/cron.d/",
+                "/etc/cron.daily/",
+                "/etc/cron.hourly/",
+                "/etc/cron.monthly/",
+                "/etc/cron.weekly/",
                 "/var/spool/cron/",
             ]
             
-            if self.target_user:
-                cron_locations.append(f"/var/spool/cron/crontabs/{self.target_user}")
+            # Handle user crontabs differently
+            crontabs_dir = "/var/spool/cron/crontabs"
             
+            # Process standard cron locations
             for location in cron_locations:
                 location = self.expand_path(location)
                 if not os.path.exists(location):
@@ -383,11 +388,29 @@ class Scanner:
                     if os.path.isdir(location):
                         for cron_file in os.listdir(location):
                             cron_path = os.path.join(location, cron_file)
-                            self._check_cron_file(cron_path)
+                            if os.path.isfile(cron_path):
+                                self._check_cron_file(cron_path)
                     else:
                         self._check_cron_file(location)
                 except Exception as e:
                     print(f"Error checking cron location {location}: {e}")
+            
+            # Process user crontabs directory specially
+            if os.path.exists(crontabs_dir) and os.path.isdir(crontabs_dir):
+                try:
+                    # If target user is specified, only check that user's crontab
+                    if self.target_user:
+                        user_crontab = os.path.join(crontabs_dir, self.target_user)
+                        if os.path.exists(user_crontab) and os.path.isfile(user_crontab):
+                            self._check_cron_file(user_crontab)
+                    else:
+                        # Otherwise check all user crontabs
+                        for user_file in os.listdir(crontabs_dir):
+                            user_crontab = os.path.join(crontabs_dir, user_file)
+                            if os.path.isfile(user_crontab):
+                                self._check_cron_file(user_crontab)
+                except Exception as e:
+                    print(f"Error checking user crontabs in {crontabs_dir}: {e}")
     
     def _check_cron_file(self, cron_path: str) -> None:
         """Check a cron file for suspicious entries"""

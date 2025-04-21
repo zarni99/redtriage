@@ -215,12 +215,12 @@ class Cleaner:
                 
             try:
                 # If it's a file in cron.d or another cron directory, delete the file
-                if os.path.dirname(cron_path) in ["/etc/cron.d", "/etc/cron.daily", "/etc/cron.hourly", "/etc/cron.monthly"]:
+                if os.path.dirname(cron_path) in ["/etc/cron.d", "/etc/cron.daily", "/etc/cron.hourly", "/etc/cron.monthly", "/etc/cron.weekly"]:
                     os.remove(cron_path)
                     print(f"Removed cron file: {cron_path}")
                     return True
-                # If it's the main crontab file, we need to edit it
-                elif cron_path in ["/etc/crontab", "/var/spool/cron/crontabs/" + self.target_user]:
+                # If it's the main crontab file or a user crontab, we need to edit it
+                elif cron_path == "/etc/crontab" or os.path.dirname(cron_path) == "/var/spool/cron/crontabs":
                     # Read the content first
                     with open(cron_path, 'r') as f:
                         content = f.readlines()
