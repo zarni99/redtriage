@@ -8,8 +8,9 @@ Created by: Zarni (Neo)
 
 - **Scan**: Detect common red team artifacts and tools
 - **Clean**: Remove suspicious files, wipe shell histories, etc.
-- **Report**: Generate reports in text, JSON, or HTML format
+- **Report**: Generate reports in text, JSON, HTML, or PDF format
 - **Help**: Detailed information about the tool's usage and capabilities
+- **Network Scanning**: Identify suspicious network connections and configurations
 
 ## Installation
 
@@ -24,6 +25,42 @@ pip install -r requirements.txt
 # Make the script executable
 chmod +x redtriage.py
 ```
+
+## Capabilities
+
+RedTriage can detect and clean various artifacts left by red team activities:
+
+### File System Artifacts
+- Suspicious binaries and scripts
+- Modified configuration files
+- Shell history files with suspicious commands
+- Webshells and backdoors
+
+### Scheduled Tasks
+- Suspicious scheduled tasks and cron jobs
+- Persistence mechanisms
+
+### Network Artifacts
+- Suspicious active network connections
+- Unusual listening ports
+- Connections to known malicious domains/IPs
+- Suspicious firewall rule modifications
+- Unusual proxy settings
+- VPN connections
+- SSH connections with potential backdoor configurations
+
+### Registry Artifacts (Windows)
+- Autorun entries
+- Service modifications
+- Suspicious registry keys
+
+### Container Artifacts
+- Suspicious container configurations
+- Potentially malicious images
+
+### Process Artifacts
+- Suspicious running processes
+- Memory-resident malware indicators
 
 ## Usage
 
@@ -105,6 +142,19 @@ chmod +x redtriage.py
 - **minimal**: Basic checks and cleanup actions
 - **standard**: Default level - comprehensive but conservative
 - **paranoid**: Aggressive checks and cleanup (may produce false positives)
+
+## Detection Categories
+
+RedTriage can detect the following categories of artifacts:
+
+- **Suspicious Files**: Files related to common red team tools (mimikatz, nc, chisel, etc.)
+- **Modified Configs**: Recently modified configuration files (sshd_config, hosts, etc.)
+- **Shell Histories**: Suspicious commands in shell history files
+- **Scheduled Tasks**: Suspicious scheduled tasks or cron jobs
+- **Network Connections**: Suspicious network connections, unusual ports, and firewall modifications
+- **Registry Entries**: Suspicious Windows registry entries for persistence or configuration
+- **Container Artifacts**: Suspicious container images or configurations
+- **Process Artifacts**: Unusual running processes or memory-resident tools
 
 ## Warning
 
