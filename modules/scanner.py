@@ -1259,40 +1259,40 @@ class Scanner:
         
         # File system findings
         console.print("\n[bold]File System:[/bold]", highlight=False)
-        console.print(f"🔍 Suspicious files: [cyan]{len(self.findings['suspicious_files'])}", highlight=False)
-        console.print(f"🔍 Modified configs: [cyan]{len(self.findings['modified_configs'])}", highlight=False)
-        console.print(f"🔍 Shell histories with suspicious commands: [cyan]{len(self.findings['shell_histories'])}", highlight=False)
+        console.print(f"[*] Suspicious files: [cyan]{len(self.findings['suspicious_files'])}", highlight=False)
+        console.print(f"[*] Modified configs: [cyan]{len(self.findings['modified_configs'])}", highlight=False)
+        console.print(f"[*] Shell histories with suspicious commands: [cyan]{len(self.findings['shell_histories'])}", highlight=False)
         
         # Scheduled tasks
         console.print("\n[bold]Scheduled Tasks:[/bold]", highlight=False)
-        console.print(f"🔍 Suspicious scheduled tasks: [cyan]{len(self.findings['scheduled_tasks'])}", highlight=False)
+        console.print(f"[*] Suspicious scheduled tasks: [cyan]{len(self.findings['scheduled_tasks'])}", highlight=False)
         
         # Network findings
         console.print("\n[bold]Network:[/bold]", highlight=False)
         if "suspicious_network" in self.findings:
-            console.print(f"🔍 Suspicious network connections: [cyan]{len(self.findings['suspicious_network'])}", highlight=False)
+            console.print(f"[*] Suspicious network connections: [cyan]{len(self.findings['suspicious_network'])}", highlight=False)
         if "listening_ports" in self.findings:
-            console.print(f"🔍 Unusual listening ports: [cyan]{len(self.findings['listening_ports'])}", highlight=False)
+            console.print(f"[*] Unusual listening ports: [cyan]{len(self.findings['listening_ports'])}", highlight=False)
         if "firewall_modifications" in self.findings:
-            console.print(f"🔍 Suspicious firewall rules: [cyan]{len(self.findings['firewall_modifications'])}", highlight=False)
+            console.print(f"[*] Suspicious firewall rules: [cyan]{len(self.findings['firewall_modifications'])}", highlight=False)
         if "proxy_settings" in self.findings:
-            console.print(f"🔍 Suspicious proxy settings: [cyan]{len(self.findings['proxy_settings'])}", highlight=False)
+            console.print(f"[*] Suspicious proxy settings: [cyan]{len(self.findings['proxy_settings'])}", highlight=False)
         if "vpn_connections" in self.findings:
-            console.print(f"🔍 Active VPN connections: [cyan]{len(self.findings['vpn_connections'])}", highlight=False)
+            console.print(f"[*] Active VPN connections: [cyan]{len(self.findings['vpn_connections'])}", highlight=False)
         if "ssh_connections" in self.findings:
-            console.print(f"🔍 Suspicious SSH connections: [cyan]{len(self.findings['ssh_connections'])}", highlight=False)
+            console.print(f"[*] Suspicious SSH connections: [cyan]{len(self.findings['ssh_connections'])}", highlight=False)
         
         # Other artifacts
         console.print("\n[bold]Other Artifacts:[/bold]", highlight=False)
         if "container_artifacts" in self.findings:
-            console.print(f"🔍 Suspicious container artifacts: [cyan]{len(self.findings['container_artifacts'])}", highlight=False)
+            console.print(f"[*] Suspicious container artifacts: [cyan]{len(self.findings['container_artifacts'])}", highlight=False)
         if "memory_artifacts" in self.findings:
-            console.print(f"🔍 Suspicious processes: [cyan]{len(self.findings['memory_artifacts'])}", highlight=False)
+            console.print(f"[*] Suspicious processes: [cyan]{len(self.findings['memory_artifacts'])}", highlight=False)
         
         # Windows-specific findings
         if self.os == "Windows" and "registry_artifacts" in self.findings:
             console.print("\n[bold]Windows-specific:[/bold]", highlight=False)
-            console.print(f"🔍 Registry artifacts: [cyan]{len(self.findings['registry_artifacts'])}", highlight=False)
+            console.print(f"[*] Registry artifacts: [cyan]{len(self.findings['registry_artifacts'])}", highlight=False)
         
         console.print("\n[italic]Use 'redtriage.py clean' to clean these artifacts[/italic]", highlight=False)
         
