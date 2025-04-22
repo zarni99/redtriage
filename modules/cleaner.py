@@ -91,7 +91,6 @@ class Cleaner:
         
         selected = set(range(len(items)))
         
-        # Process items in batches
         total_items = len(items)
         current_page = 0
         pages = (total_items + self.batch_size - 1) // self.batch_size
@@ -99,7 +98,6 @@ class Cleaner:
         while True:
             print(f"\n--- Showing items {current_page * self.batch_size + 1}-{min((current_page + 1) * self.batch_size, total_items)} of {total_items} ---")
             
-            # Display current batch
             start_idx = current_page * self.batch_size
             end_idx = min((current_page + 1) * self.batch_size, total_items)
             
@@ -234,7 +232,7 @@ class Cleaner:
                     after_date = now - timedelta(days=30)
                     date_description = "the last month"
                 elif choice == '5':
-                    # Custom date range
+
                     while True:
                         try:
                             date_str = input("Enter date in YYYY-MM-DD format: ").strip()
@@ -247,7 +245,7 @@ class Cleaner:
                     print("Invalid choice. Please enter a number between 1 and 5.")
                     continue
                 
-                # Find files modified after the selected date
+
                 matched = []
                 for i, item in enumerate(items):
                     if "mtime" in item:
@@ -274,13 +272,13 @@ class Cleaner:
         """
         groups = {}
         
-        # Group files by directory
+
         for i, item in enumerate(items):
             if "path" in item:
                 path = item["path"]
                 dirname = os.path.dirname(path)
                 
-                # Special cases for known patterns
+
                 if "Firefox" in path and "datareporting" in path:
                     group = "Firefox Data Reporting Files"
                 elif "Firefox" in path and "extension-preferences" in path:
@@ -306,7 +304,7 @@ class Cleaner:
         if self.force:
             return list(range(len(items)))
         
-        # Check if we need to filter by date from the command line options
+
         if self.date_filter and items:
             filtered_indices = []
             for i, item in enumerate(items):
@@ -327,7 +325,6 @@ class Cleaner:
             filtered_indices = list(range(len(items)))
             items_desc = category
         
-        # If we have a lot of items, suggest grouping them
         if len(filtered_indices) > self.batch_size:
             print(f"\nFound {len(filtered_indices)} {category}. Would you like to:")
             print("1. View all items individually")
@@ -338,7 +335,6 @@ class Cleaner:
             choice = input("Enter your choice (1-4): ").strip()
             
             if choice == '2':
-                # Create a subset of the items for grouping
                 subset = [items[i] for i in filtered_indices]
                 groups = self.group_similar_items(subset)
                 
@@ -370,7 +366,6 @@ class Cleaner:
                         selected_indices = []
                         for i, (_, indices) in enumerate(groups.items()):
                             if i in selected_groups:
-                                # Map back to original indices
                                 for idx in indices:
                                     selected_indices.append(filtered_indices[idx])
                         
@@ -382,22 +377,21 @@ class Cleaner:
             elif choice == '3':
                 subset = [items[i] for i in filtered_indices]
                 date_indices = self.select_items_date(subset)
-                # Map back to original indices
+                
                 return [filtered_indices[i] for i in date_indices]
             elif choice == '4':
                 return []
         
-        # First-tier prompt: category level
         response = self.prompt_category(items_desc, [items[i] for i in filtered_indices], len(filtered_indices))
         
         if response == 'y':
-            # Clean all items
+
             return filtered_indices
         elif response == 'n':
-            # Skip all items
+
             return []
         elif response == 's':
-            # Second-tier prompt: selection mode
+
             mode = self.prompt_selection_mode(category)
             
             subset = [items[i] for i in filtered_indices]
@@ -408,22 +402,22 @@ class Cleaner:
                 return []
             elif mode == 'i':
                 indices = self.select_items_interactive(subset, item_formatter)
-                # Map back to original indices
+
                 return [filtered_indices[i] for i in indices]
             elif mode == 'r':
                 indices = self.select_items_range(len(subset))
-                # Map back to original indices
+
                 return [filtered_indices[i] for i in indices]
             elif mode == 'f':
                 indices = self.select_items_filter(subset)
-                # Map back to original indices
+
                 return [filtered_indices[i] for i in indices]
             elif mode == 'd':
                 indices = self.select_items_date(subset)
-                # Map back to original indices
+
                 return [filtered_indices[i] for i in indices]
         
-        # Default is to clean nothing
+
         return []
     
     def expand_path(self, path: str) -> str:
@@ -1135,7 +1129,7 @@ class Cleaner:
         return self.cleaned_items
 
 
-def clean_artifacts(dry_run: bool, force: bool, profile: str, target_user: Optional[str] = None,
+def clean_artifacts(dry_run: bool, profile: str, force: bool, target_user: Optional[str] = None,
                    scan_results: Optional[str] = None, date_filter: Optional[Dict[str, datetime]] = None,
                    batch_size: int = 15, specific_artifacts: Optional[List[str]] = None) -> Dict[str, Any]:
     """
@@ -1143,8 +1137,8 @@ def clean_artifacts(dry_run: bool, force: bool, profile: str, target_user: Optio
     
     Args:
         dry_run: Whether to perform a dry run
-        force: Whether to force cleanup without confirmation
         profile: Scanning profile (minimal, standard, paranoid)
+        force: Whether to force cleanup without confirmation
         target_user: User directory to target
         scan_results: Path to scan results JSON file
         date_filter: Optional dictionary with 'after' and/or 'before' datetime objects
@@ -1195,7 +1189,7 @@ def main():
     batch_size = 15
     specific_artifacts = None
     
-    cleaned_items = clean_artifacts(dry_run, force, profile, target_user, scan_results, date_filter, batch_size, specific_artifacts)
+    cleaned_items = clean_artifacts(dry_run, profile, force, target_user, scan_results, date_filter, batch_size, specific_artifacts)
     
     # Save results to file
     output_file = f"redtriage_cleanup_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
