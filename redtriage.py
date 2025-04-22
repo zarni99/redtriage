@@ -20,6 +20,46 @@ except NameError:
 if current_dir not in sys.path:
     sys.path.insert(0, current_dir)
 
+# Try to import required packages, install if missing
+def ensure_package(package_name, import_name=None):
+    """Ensure a package is installed, try to install if missing"""
+    if import_name is None:
+        import_name = package_name
+    
+    try:
+        __import__(import_name)
+        return True
+    except ImportError:
+        print(f"Required package '{import_name}' not found. Attempting to install {package_name}...")
+        try:
+            import subprocess
+            subprocess.check_call([sys.executable, "-m", "pip", "install", "--user", package_name])
+            print(f"Successfully installed {package_name}")
+            return True
+        except Exception as e:
+            print(f"Error installing {package_name}: {e}")
+            print(f"Please install it manually: pip install --user {package_name}")
+            return False
+
+# Ensure basic dependencies
+packages = [
+    ("typer>=0.7.0", "typer"),
+    ("rich>=12.0.0", "rich"),
+    ("click>=8.1.7", "click"),
+    ("colorama>=0.4.4", "colorama")
+]
+
+missing_deps = False
+for package, import_name in packages:
+    if not ensure_package(package, import_name):
+        missing_deps = True
+
+if missing_deps:
+    print("\nSome dependencies could not be installed automatically.")
+    print("Try running this command manually:")
+    print("pip install --user typer>=0.7.0 rich>=12.0.0 click>=8.1.7 colorama>=0.4.4")
+    sys.exit(1)
+
 # Apply Windows compatibility patch before importing typer
 try:
     if platform.system() == "Windows":

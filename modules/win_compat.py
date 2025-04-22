@@ -7,6 +7,17 @@ Created by: Zarni (Neo)
 import sys
 import platform
 import os
+import subprocess
+
+def install_package(package_name):
+    """
+    Install a Python package using pip
+    """
+    try:
+        subprocess.check_call([sys.executable, "-m", "pip", "install", package_name])
+        return True
+    except subprocess.CalledProcessError:
+        return False
 
 def patch_click_for_windows():
     """
@@ -16,21 +27,34 @@ def patch_click_for_windows():
     if platform.system() != "Windows":
         return
     
+    # First make sure click package is installed
+    try:
+        import click
+    except ImportError:
+        print("Required package 'click' not found. Attempting to install...")
+        
+        # Try different versions in case one fails
+        for version in ["click==8.1.7", "click==8.1.6", "click==8.1.3", "click"]:
+            print(f"Trying to install {version}...")
+            if install_package(version):
+                print(f"Successfully installed {version}")
+                try:
+                    import click
+                    break
+                except ImportError:
+                    continue
+        else:
+            print("Error: Failed to install click package. Please install it manually:")
+            print("pip install --user click==8.1.7")
+            sys.exit(1)
+    
     # Only needed for Python 3.12+
     if sys.version_info < (3, 12):
         return
     
     try:
-        import click
         import click._winconsole
     except ImportError:
-        # Check if click is installed
-        try:
-            import click
-        except ImportError:
-            print("Error: Required package 'click' not found. Install it using 'pip install click>=8.1.7'")
-            sys.exit(1)
-        
         # If click is installed but _winconsole is missing, create a temporary solution
         click_path = os.path.dirname(click.__file__)
         
@@ -46,6 +70,22 @@ def _get_windows_console_stream(f, encoding, errors):
     return io.TextIOWrapper(f, encoding=encoding, errors=errors)
                     """)
                 print("Created compatibility fix for click package on Windows with Python 3.12+")
+                
+                # Now let's make sure we can import it
+                try:
+                    sys.path.insert(0, click_path)
+                    import _winconsole
+                    sys.path.pop(0)
+                    print("Successfully loaded the compatibility module")
+                except ImportError:
+                    print("Warning: Created compatibility file but still unable to import it.")
+                    print("You may need to run this script with administrator privileges.")
             except Exception as e:
                 print(f"Warning: Could not create compatibility fix: {e}")
-                print("Try running this script with administrator privileges") 
+                print("Try running this script with administrator privileges")
+                print("\nAlternatively, you can manually create a file at this location:")
+                print(f"{winconsole_path}")
+                print("With this content:")
+                print('def _get_windows_console_stream(f, encoding, errors):')
+                print('    import io')
+                print('    return io.TextIOWrapper(f, encoding=encoding, errors=errors)') 
