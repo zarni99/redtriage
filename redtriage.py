@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 """
 RedTriage - A tool for red teamers to clean up artifacts
 Created by: Zarni (Neo)
