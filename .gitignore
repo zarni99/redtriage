@@ -8,22 +8,33 @@ dist/
 build/
 *.egg-info/
 
-# Virtual environments
-venv/
-env/
-ENV/
+# Unit test / coverage reports
+htmlcov/
+.tox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
 
-# Scan and cleanup results
-redtriage_scan_*.json
-redtriage_cleanup_*.json
-redtriage_report_*.txt
-redtriage_report_*.json
-redtriage_report_*.html
-
-# Local configuration
+# Environments
 .env
-.vscode/
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# Scan results
+redtriage_scan_*.json
+
+# IDE specific files
 .idea/
+.vscode/
+*.swp
+*.swo
 
 # OS specific files
 .DS_Store
