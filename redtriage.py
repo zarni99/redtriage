@@ -11,7 +11,12 @@ from typing import Optional, List
 from datetime import datetime, timedelta
 
 # Make sure the modules directory is in the Python path
-current_dir = os.path.dirname(os.path.abspath(__file__))
+try:
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+except NameError:
+    # __file__ is not defined when script is run directly in some environments
+    current_dir = os.path.dirname(os.path.abspath(sys.argv[0]))
+
 if current_dir not in sys.path:
     sys.path.insert(0, current_dir)
 
@@ -34,7 +39,22 @@ banner_console.print(Panel.fit(
 # Print operating system information
 os_name = platform.system()
 banner_console.print(f"RedTriage - Operating System: {os_name}")
-if os_name != "Windows" and os.geteuid() != 0:
+
+# Check for admin privileges in a cross-platform way
+is_admin = False
+if os_name == "Windows":
+    try:
+        import ctypes
+        is_admin = ctypes.windll.shell32.IsUserAnAdmin() != 0
+    except:
+        is_admin = False
+else:
+    try:
+        is_admin = os.geteuid() == 0
+    except AttributeError:
+        is_admin = False
+
+if not is_admin:
     banner_console.print("Warning: RedTriage may require sudo/root privileges for complete functionality\n")
 
 try:
@@ -293,5 +313,10 @@ def show_detailed_help():
 
 
 if __name__ == "__main__":
-    
-    app() 
+    try:
+        app()
+    except Exception as e:
+        print(f"Error running RedTriage: {e}")
+        print("If you're seeing import errors, make sure you have installed all required packages:")
+        print("pip install typer rich")
+        sys.exit(1) 
