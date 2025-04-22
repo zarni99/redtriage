@@ -6,6 +6,7 @@ Created by: Zarni (Neo)
 
 import sys
 import platform
+import os
 
 def patch_click_for_windows():
     """
@@ -23,9 +24,6 @@ def patch_click_for_windows():
         import click
         import click._winconsole
     except ImportError:
-        import sys
-        import os
-        
         # Check if click is installed
         try:
             import click
