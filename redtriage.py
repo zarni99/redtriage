@@ -3,7 +3,6 @@
 RedTriage - A tool for red teamers to clean up artifacts
 Created by: Zarni (Neo)
 """
-import typer
 import platform
 import os
 import sys
@@ -20,6 +19,18 @@ except NameError:
 
 if current_dir not in sys.path:
     sys.path.insert(0, current_dir)
+
+# Apply Windows compatibility patch before importing typer
+try:
+    if platform.system() == "Windows":
+        from modules.win_compat import patch_click_for_windows
+        patch_click_for_windows()
+except ImportError:
+    # Continue even if the module is not found, as we'll handle dependencies later
+    pass
+
+# Now import typer which depends on click
+import typer
 
 try:
     from rich.console import Console
