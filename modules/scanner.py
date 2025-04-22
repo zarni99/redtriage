@@ -1,7 +1,8 @@
-#!/usr/bin/env python3
 """
 Scanner module for RedTriage
 Detects common red team artifacts and tools
+Created by: Zarni (Neo)
+Copyright (c) 2025 Zarni (Neo)
 """
 
 import os
@@ -17,36 +18,33 @@ import subprocess
 from typing import List, Dict, Any, Optional, Tuple
 from datetime import datetime
 
-# Import network scanner
 from modules.network_scanner import scan_network_artifacts
 
-# Common red team tool names
 COMMON_TOOL_NAMES = [
-    # Recon and scanning tools
+    
     "nmap", "masscan", "enum4linux", "crackmapexec", "responder", "ldapsearch", 
     "smbclient", "smbmap", "bloodhound", "nbtscan", "nikto", "dirb", "gobuster",
     
-    # Lateral movement and tunneling
+    
     "chisel", "ligolo", "plink", "socat", "ptunnel", "stunnel", "sshuttle", "netcat", "nc",
     "proxychains", "iodine", "frp", "gost", "ngrok", "pproxy", "ssf", 
     
-    # Credential access and exploitation
+    
     "mimikatz", "sekurlsa", "rubeus", "hashcat", "john", "hydra", "medusa", "crowbar",
     "lsassy", "nanodump", "pypykatz", "sprayhound", "kerberoast", "kerbrute",
     
-    # Privilege escalation and post-exploitation
+    
     "lpe", "linpeas", "winpeas", "unix-privesc-check", "wesng", "powerup", "metasploit",
     "empire", "covenant", "powersploit", "apfell", "merlin", "sliver", "havoc", "cobalt",
     "pwncat", "pupy", "starkiller", "mythic", "metasploit", "msfvenom", "shellter", "veil",
     
-    # Data exfiltration and staging
+    
     "rclone", "megasync", "scp", "rsync", "exfil", "egress", "transfer",
     
-    # LOLBins/LOLBas
+    
     "certutil", "bitsadmin", "regsvr32", "rundll32", "msiexec", "mshta", "wmic"
 ]
 
-# Default scan locations by OS
 DEFAULT_SCAN_LOCATIONS = {
     "Windows": [
         "%TEMP%",
@@ -79,7 +77,6 @@ DEFAULT_SCAN_LOCATIONS = {
     ]
 }
 
-# Configuration files commonly modified during engagements
 COMMON_CONFIG_FILES = {
     "Windows": [
         "C:\\Windows\\System32\\drivers\\etc\\hosts",
@@ -105,7 +102,6 @@ COMMON_CONFIG_FILES = {
     ]
 }
 
-# Shell history files
 SHELL_HISTORY_FILES = {
     "Windows": [
         "C:\\Users\\%USERNAME%\\AppData\\Roaming\\Microsoft\\Windows\\PowerShell\\PSReadLine\\ConsoleHost_history.txt",
@@ -127,11 +123,12 @@ SHELL_HISTORY_FILES = {
 }
 
 class Scanner:
-    def __init__(self, dry_run: bool, profile: str, target_user: Optional[str] = None):
+    def __init__(self, dry_run: bool, profile: str, target_user: Optional[str] = None, date_filter: Optional[Dict[str, datetime]] = None):
         self.dry_run = dry_run
         self.profile = profile
         self.target_user = target_user
         self.os = platform.system()
+        self.date_filter = date_filter or {}
         self.findings = {
             "suspicious_files": [],
             "suspicious_processes": [],
@@ -155,20 +152,20 @@ class Scanner:
         """Check if a file is potentially suspicious based on name or content"""
         filename = os.path.basename(filepath).lower()
         
-        # Check if filename contains common red team tool names
+        
         for tool in COMMON_TOOL_NAMES:
             if tool.lower() in filename:
                 return True
                 
-        # Additional checks for binary files and scripts
+        
         suspicious_extensions = ['.exe', '.dll', '.sh', '.ps1', '.bat', '.vbs', '.py', '.rb']
         if any(filename.endswith(ext) for ext in suspicious_extensions):
             try:
-                # Read part of the file to check for suspicious content
+                
                 with open(filepath, 'rb') as f:
                     content = f.read(4096)
                     
-                # Check for common suspicious strings in binaries or scripts
+                
                 suspicious_strings = [
                     b'powershell -e', b'Invoke-Mimikatz', b'IEX', b'msfvenom', 
                     b'reverse shell', b'bind shell', b'privilege escalation'
@@ -177,12 +174,12 @@ class Scanner:
                 if any(s in content for s in suspicious_strings):
                     return True
                     
-                # For paranoid profile, check file entropy (high entropy may indicate encryption/obfuscation)
+                
                 if self.profile == "paranoid" and self._calculate_entropy(content) > 7.0:
                     return True
                     
             except Exception:
-                # If we can't read the file, better be safe and flag it
+                
                 if self.profile == "paranoid":
                     return True
         
@@ -225,12 +222,29 @@ class Scanner:
                 print(f"Error accessing {location}: {e}")
     
     def _check_file(self, filepath: str) -> None:
-        """Check individual file for suspiciousness"""
+        """Check if a file is suspicious and add it to findings"""
         try:
-            if not os.path.exists(filepath) or not os.path.isfile(filepath):
+            if not os.path.isfile(filepath):
                 return
-                
-            # Skip if targeting specific user and file not in their directory
+
+            # Get file stats
+            stats = os.stat(filepath)
+            mtime = stats.st_mtime
+            mod_time = datetime.fromtimestamp(mtime)
+            
+            # Apply date filters
+            if 'after' in self.date_filter and mod_time < self.date_filter['after']:
+                return
+            if 'before' in self.date_filter and mod_time > self.date_filter['before']:
+                return
+            
+            file_info = {
+                "path": filepath,
+                "size": stats.st_size,
+                "mtime": mtime,
+                "mod_time_str": mod_time.strftime("%Y-%m-%d %H:%M:%S")
+            }
+            
             if self.target_user:
                 if self.os == "Windows":
                     user_dir = f"C:\\Users\\{self.target_user}"
@@ -240,17 +254,9 @@ class Scanner:
                 if not filepath.startswith(user_dir):
                     return
             
-            # Check if suspicious
+            
             if self.is_suspicious_file(filepath):
-                stats = os.stat(filepath)
-                self.findings["suspicious_files"].append({
-                    "path": filepath,
-                    "size": stats.st_size,
-                    "created": datetime.fromtimestamp(stats.st_ctime).isoformat(),
-                    "modified": datetime.fromtimestamp(stats.st_mtime).isoformat(),
-                    "accessed": datetime.fromtimestamp(stats.st_atime).isoformat(),
-                    "reason": "Suspicious name or content",
-                })
+                self.findings["suspicious_files"].append(file_info)
                 print(f"Found suspicious file: {filepath}")
         except Exception as e:
             print(f"Error checking file {filepath}: {e}")
@@ -266,10 +272,10 @@ class Scanner:
                 
             try:
                 stats = os.stat(config_file)
-                # Consider recently modified config files as suspicious
-                # For example, modified in the last 7 days
+                
+                
                 current_time = datetime.now().timestamp()
-                seven_days = 7 * 24 * 60 * 60  # 7 days in seconds
+                seven_days = 7 * 24 * 60 * 60  
                 
                 if current_time - stats.st_mtime < seven_days:
                     self.findings["modified_configs"].append({
@@ -288,7 +294,7 @@ class Scanner:
         for history_file in history_files:
             history_file = self.expand_path(history_file)
             
-            # If targeting specific user, adjust the path
+            
             if self.target_user:
                 if self.os == "Windows":
                     history_file = history_file.replace("%USERNAME%", self.target_user)
@@ -305,10 +311,10 @@ class Scanner:
                 with open(history_file, 'r', errors='ignore') as f:
                     for line in f:
                         line = line.strip()
-                        # Check for suspicious commands in history
+                        
                         if any(tool in line.lower() for tool in COMMON_TOOL_NAMES):
                             suspicious_cmds.append(line)
-                        # Check for other common red team activities
+                        
                         suspicious_patterns = [
                             r'wget https?://', r'curl https?://', r'nc -[e]', r'bash -i',
                             r'python -c', r'perl -e', r'echo.*\|.*sh', r'curl.*\|.*sh',
@@ -331,13 +337,13 @@ class Scanner:
     def scan_scheduled_tasks(self) -> None:
         """Scan for suspicious scheduled tasks or cron jobs"""
         if self.os == "Windows":
-            # Windows scheduled tasks
+            
             try:
                 import subprocess
                 result = subprocess.run(["schtasks", "/query", "/fo", "csv"], 
                                         capture_output=True, text=True, check=False)
                 
-                tasks = result.stdout.splitlines()[1:]  # Skip header
+                tasks = result.stdout.splitlines()[1:]  
                 for task in tasks:
                     task_parts = task.split(",")
                     if len(task_parts) < 2:
@@ -345,13 +351,13 @@ class Scanner:
                         
                     task_name = task_parts[0].strip('"')
                     
-                    # Get more details about the task
+                    
                     task_detail = subprocess.run(
                         ["schtasks", "/query", "/tn", task_name, "/v", "/fo", "list"],
                         capture_output=True, text=True, check=False
                     )
                     
-                    # Check for suspicious task details
+                    
                     detail_text = task_detail.stdout.lower()
                     if any(tool in detail_text for tool in COMMON_TOOL_NAMES):
                         self.findings["scheduled_tasks"].append({
@@ -364,7 +370,7 @@ class Scanner:
                 print(f"Error checking scheduled tasks: {e}")
                 
         elif self.os == "Linux" or self.os == "Darwin":
-            # Check cron jobs
+            
             cron_locations = [
                 "/etc/crontab",
                 "/etc/cron.d/",
@@ -375,10 +381,10 @@ class Scanner:
                 "/var/spool/cron/",
             ]
             
-            # Handle user crontabs differently
+            
             crontabs_dir = "/var/spool/cron/crontabs"
             
-            # Process standard cron locations
+            
             for location in cron_locations:
                 location = self.expand_path(location)
                 if not os.path.exists(location):
@@ -395,16 +401,16 @@ class Scanner:
                 except Exception as e:
                     print(f"Error checking cron location {location}: {e}")
             
-            # Process user crontabs directory specially
+            
             if os.path.exists(crontabs_dir) and os.path.isdir(crontabs_dir):
                 try:
-                    # If target user is specified, only check that user's crontab
+                    
                     if self.target_user:
                         user_crontab = os.path.join(crontabs_dir, self.target_user)
                         if os.path.exists(user_crontab) and os.path.isfile(user_crontab):
                             self._check_cron_file(user_crontab)
                     else:
-                        # Otherwise check all user crontabs
+                        
                         for user_file in os.listdir(crontabs_dir):
                             user_crontab = os.path.join(crontabs_dir, user_file)
                             if os.path.isfile(user_crontab):
@@ -421,12 +427,12 @@ class Scanner:
             suspicious = False
             reason = ""
             
-            # Check for suspicious commands
+            
             if any(tool in content.lower() for tool in COMMON_TOOL_NAMES):
                 suspicious = True
                 reason = "Contains suspicious tool name"
             
-            # Check for suspicious patterns
+            
             suspicious_patterns = [
                 r'wget https?://', r'curl https?://', r'nc -[e]', r'bash -i',
                 r'python -c', r'perl -e', r'echo.*\|.*sh', r'curl.*\|.*sh',
@@ -457,27 +463,44 @@ class Scanner:
         
         try:
             if self.os == "Windows":
-                # Use netstat on Windows
+                # Windows netstat
                 result = subprocess.run(
                     ["netstat", "-nao"],
                     capture_output=True, text=True, check=False
                 )
                 connections = self._parse_windows_netstat(result.stdout)
-            else:
-                # Use ss on Linux/MacOS
+            elif self.os == "Darwin":  # macOS
+                # Use netstat on macOS
                 result = subprocess.run(
-                    ["ss", "-tulpn"],
+                    ["netstat", "-na"],
                     capture_output=True, text=True, check=False
                 )
-                if result.returncode != 0:
-                    # Fall back to netstat if ss is not available
+                connections = self._parse_macos_netstat(result.stdout)
+            else:  # Linux
+                # Try ss first, fallback to netstat
+                try:
+                    result = subprocess.run(
+                        ["ss", "-tulpn"],
+                        capture_output=True, text=True, check=False
+                    )
+                    if result.returncode == 0:
+                        connections = self._parse_unix_netstat(result.stdout)
+                    else:
+                        # Fallback to netstat
+                        result = subprocess.run(
+                            ["netstat", "-tulpn"],
+                            capture_output=True, text=True, check=False
+                        )
+                        connections = self._parse_unix_netstat(result.stdout)
+                except FileNotFoundError:
+                    # If ss is not found, try netstat
                     result = subprocess.run(
                         ["netstat", "-tulpn"],
                         capture_output=True, text=True, check=False
                     )
-                connections = self._parse_unix_netstat(result.stdout)
+                    connections = self._parse_unix_netstat(result.stdout)
                 
-            # Check for suspicious connections
+            # Analyze the connections
             self._analyze_connections(connections)
                 
         except Exception as e:
@@ -488,7 +511,7 @@ class Scanner:
         connections = []
         lines = netstat_output.splitlines()
         
-        # Skip header lines
+        
         for line in lines[4:]:
             parts = line.strip().split()
             if len(parts) >= 5:
@@ -516,7 +539,7 @@ class Scanner:
         connections = []
         lines = netstat_output.splitlines()
         
-        # Skip header line
+        
         for line in lines[1:]:
             parts = line.strip().split()
             if len(parts) >= 5:
@@ -527,7 +550,7 @@ class Scanner:
                     state = parts[1] if len(parts) > 5 else "LISTEN"
                     pid = "unknown"
                     
-                    # Try to extract PID from the last column
+                    
                     pid_match = re.search(r'pid=(\d+)', line)
                     if pid_match:
                         pid = pid_match.group(1)
@@ -544,18 +567,45 @@ class Scanner:
                     
         return connections
     
+    def _parse_macos_netstat(self, netstat_output: str) -> List[Dict[str, Any]]:
+        """Parse macOS netstat output"""
+        connections = []
+        lines = netstat_output.splitlines()
+        
+        for line in lines[1:]:  # Skip the header
+            parts = line.strip().split()
+            if len(parts) >= 4:
+                try:
+                    proto = parts[0]
+                    local_addr = parts[3]
+                    remote_addr = parts[4] if len(parts) > 4 else "*.*"
+                    state = parts[5] if len(parts) > 5 else "LISTEN"
+                    pid = "unknown"  # macOS netstat doesn't show PIDs by default
+                    
+                    connections.append({
+                        "protocol": proto,
+                        "local_address": local_addr,
+                        "remote_address": remote_addr,
+                        "state": state,
+                        "pid": pid
+                    })
+                except Exception:
+                    continue
+                    
+        return connections
+    
     def _is_suspicious_port(self, port: int) -> bool:
         """Check if a port is commonly used for C2 or tunneling"""
         suspicious_ports = [
-            4444,  # Metasploit default
-            1080,  # SOCKS proxy
-            8080,  # Common HTTP proxy
-            8443,  # Common HTTPS proxy
-            31337, # Elite (leet)
-            1337,  # Leet
-            6666,  # Common backdoor
-            6000,  # Common X11 forwarding
-            1090,  # Java RMI
+            4444,  
+            1080,  
+            8080,  
+            8443,  
+            31337, 
+            1337,  
+            6666,  
+            6000,  
+            1090,  
         ]
         
         return port in suspicious_ports
@@ -603,39 +653,39 @@ class Scanner:
             is_suspicious = False
             reason = []
             
-            # Check local port
+            
             local_port = self._extract_port(conn["local_address"])
             if local_port and self._is_suspicious_port(local_port):
                 is_suspicious = True
                 reason.append(f"Suspicious local port: {local_port}")
             
-            # Check remote port
+            
             remote_port = self._extract_port(conn["remote_address"])
             if remote_port and self._is_suspicious_port(remote_port):
                 is_suspicious = True
                 reason.append(f"Suspicious remote port: {remote_port}")
             
-            # Check remote IP for non-local listening connections
+            
             if conn["state"] == "ESTABLISHED":
                 remote_ip = conn["remote_address"].split(":")[0]
                 if not self._is_private_ip(remote_ip) and remote_ip != "0.0.0.0" and remote_ip != "::":
-                    # Get process name
+                    
                     process_name = self._get_process_name(conn["pid"])
                     
-                    # Check if process name is in the red team tools list
+                    
                     if any(tool.lower() in process_name.lower() for tool in COMMON_TOOL_NAMES):
                         is_suspicious = True
                         reason.append(f"Process name matches known red team tool: {process_name}")
             
-            # Paranoid profile: Any non-standard outbound connection is suspicious
+            
             if self.profile == "paranoid" and conn["state"] == "ESTABLISHED":
                 standard_ports = [80, 443, 22, 53]
                 if remote_port and remote_port not in standard_ports:
-                    if not is_suspicious:  # Only add if not already suspicious
+                    if not is_suspicious:  
                         is_suspicious = True
                         reason.append(f"Non-standard outbound port in paranoid mode: {remote_port}")
             
-            # Add to findings if suspicious
+            
             if is_suspicious:
                 process_name = self._get_process_name(conn["pid"])
                 self.findings["suspicious_network"].append({
@@ -652,11 +702,11 @@ class Scanner:
     def _is_private_ip(self, ip: str) -> bool:
         """Check if an IP address is private/internal"""
         try:
-            # Handle IPv6 addresses
+            
             if ":" in ip:
                 return ip.startswith("fe80:") or ip.startswith("fd")
                 
-            # IPv4 address checks
+            
             ip_parts = ip.split(".")
             if len(ip_parts) != 4:
                 return False
@@ -664,19 +714,19 @@ class Scanner:
             first_octet = int(ip_parts[0])
             second_octet = int(ip_parts[1])
             
-            # 10.0.0.0/8
+            
             if first_octet == 10:
                 return True
                 
-            # 172.16.0.0/12
+            
             if first_octet == 172 and 16 <= second_octet <= 31:
                 return True
                 
-            # 192.168.0.0/16
+            
             if first_octet == 192 and second_octet == 168:
                 return True
                 
-            # 127.0.0.0/8 (localhost)
+            
             if first_octet == 127:
                 return True
                 
@@ -691,40 +741,40 @@ class Scanner:
             
         print("\n[*] Scanning Windows registry for suspicious entries...")
         
-        # Common registry locations used by attackers
+        
         suspicious_registry_keys = [
-            # Run keys for persistence
+            
             r"HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Run",
             r"HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\RunOnce",
             r"HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Run",
             r"HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\RunOnce",
             
-            # Startup folders
+            
             r"HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Shell Folders",
             r"HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\User Shell Folders",
             r"HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Shell Folders",
             r"HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\User Shell Folders",
             
-            # Service control keys
+            
             r"HKLM\SYSTEM\CurrentControlSet\Services",
             
-            # Known COM hijacking locations
+            
             r"HKCU\Software\Classes\CLSID",
             r"HKLM\SOFTWARE\Classes\CLSID",
             
-            # WinLogon keys
+            
             r"HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Winlogon",
             
-            # AppInit DLLs for code injection
+            
             r"HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Windows\AppInit_DLLs",
             
-            # Image File Execution Options (debugger redirection)
+            
             r"HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Image File Execution Options",
         ]
         
         for reg_key in suspicious_registry_keys:
             try:
-                # Call reg.exe to query registry keys
+                
                 root, key = reg_key.split("\\", 1)
                 result = subprocess.run(
                     ["reg", "query", reg_key],
@@ -746,7 +796,7 @@ class Scanner:
                 continue
                 
             try:
-                # Parse registry value
+                
                 parts = line.split("REG_")
                 if len(parts) != 2:
                     continue
@@ -755,47 +805,47 @@ class Scanner:
                 reg_type = "REG_" + parts[1].split()[0]
                 value_data = parts[1].split(None, 1)[1] if len(parts[1].split()) > 1 else ""
                 
-                # Check for suspicious values
+                
                 is_suspicious = False
                 reason = []
                 
-                # Check for suspicious paths in value data
+                
                 if any(path in value_data.lower() for path in ["%temp%", "%appdata%", "\\users\\public\\", "powershell", "wscript", "cmd /c"]):
                     is_suspicious = True
                     reason.append(f"Contains suspicious path: {value_data}")
                 
-                # Check for obfuscated commands
+                
                 if "-e " in value_data.lower() or "-enc" in value_data.lower() or "iex" in value_data.lower():
                     is_suspicious = True
                     reason.append("Contains potentially obfuscated PowerShell command")
                 
-                # Check for suspicious extensions
+                
                 for ext in [".ps1", ".vbs", ".bat", ".tmp", ".dmp", ".exe"]:
                     if ext in value_data.lower():
                         is_suspicious = True
                         reason.append(f"References {ext} file")
                         break
                 
-                # Check for common red team tools
+                
                 for tool in COMMON_TOOL_NAMES:
                     if tool.lower() in value_data.lower():
                         is_suspicious = True
                         reason.append(f"Contains reference to known tool: {tool}")
                         break
                 
-                # High entropy in value data might indicate encoding/obfuscation
+                
                 if len(value_data) > 100 and "==" in value_data:
                     is_suspicious = True
                     reason.append("Contains possible Base64 encoded data")
                 
-                # Special checks for RunOnce and Services keys
+                
                 if "RunOnce" in registry_key or "\\Services\\" in registry_key:
-                    # For paranoid mode, treat any non-Microsoft paths as suspicious
+                    
                     if self.profile == "paranoid" and "\\windows\\" not in value_data.lower() and "\\program files\\" not in value_data.lower():
                         is_suspicious = True
                         reason.append("Non-standard path in sensitive registry key")
                 
-                # Add to findings if suspicious
+                
                 if is_suspicious:
                     self.findings["registry_artifacts"].append({
                         "key": registry_key,
@@ -806,14 +856,14 @@ class Scanner:
                     })
                     print(f"Found suspicious registry entry: {registry_key}\\{value_name}")
             except Exception as e:
-                # Skip this line if parsing fails
+                
                 continue
     
     def scan_containers(self) -> None:
         """Scan for suspicious container artifacts (Docker, LXC, etc.)"""
         print("\n[*] Scanning for container artifacts...")
         
-        # Check if Docker is installed
+        
         docker_installed = False
         try:
             result = subprocess.run(
@@ -827,7 +877,7 @@ class Scanner:
         if docker_installed:
             self._scan_docker_containers()
         
-        # Also check for container files regardless of whether containers are installed
+        
         container_paths = []
         
         if self.os == "Linux":
@@ -855,7 +905,7 @@ class Scanner:
             if os.path.exists(path):
                 print(f"Found container path: {path}")
                 
-                # Scan for suspicious files in container paths
+                
                 if os.path.isdir(path):
                     for root, _, files in os.walk(path):
                         for file in files:
@@ -865,7 +915,7 @@ class Scanner:
     def _scan_docker_containers(self) -> None:
         """Scan Docker containers for suspicious configurations"""
         try:
-            # List running containers
+            
             result = subprocess.run(
                 ["docker", "ps", "-a", "--format", "{{.ID}}\t{{.Image}}\t{{.Command}}\t{{.Names}}\t{{.Ports}}"],
                 capture_output=True, text=True, check=False
@@ -891,22 +941,22 @@ class Scanner:
                 is_suspicious = False
                 reason = []
                 
-                # Check for suspicious container configurations
                 
-                # Check suspicious ports
+                
+                
                 if any(str(port) in ports for port in [4444, 8080, 6666, 1080, 1337, 31337]):
                     is_suspicious = True
                     reason.append(f"Container exposes suspicious port(s): {ports}")
                 
-                # Check suspicious images
+                
                 suspicious_images = ["kalilinux", "parrotsec", "metasploit", "pentestkit", "blackarch"]
                 if any(img in image.lower() for img in suspicious_images):
                     is_suspicious = True
                     reason.append(f"Container uses potentially malicious image: {image}")
                 
-                # Check privileged container inspect
+                
                 if is_suspicious or self.profile == "paranoid":
-                    # Get detailed container info
+                    
                     inspect_result = subprocess.run(
                         ["docker", "inspect", container_id],
                         capture_output=True, text=True, check=False
@@ -916,12 +966,12 @@ class Scanner:
                         inspect_data = json.loads(inspect_result.stdout)
                         
                         if inspect_data and len(inspect_data) > 0:
-                            # Check for privileged mode
+                            
                             if inspect_data[0].get("HostConfig", {}).get("Privileged", False):
                                 is_suspicious = True
                                 reason.append("Container running in privileged mode")
                             
-                            # Check for dangerous mounts
+                            
                             mounts = inspect_data[0].get("Mounts", [])
                             for mount in mounts:
                                 source = mount.get("Source", "")
@@ -929,7 +979,7 @@ class Scanner:
                                     is_suspicious = True
                                     reason.append(f"Container has sensitive host path mounted: {source}")
                 
-                # Add to findings if suspicious
+                
                 if is_suspicious:
                     self.findings["container_artifacts"].append({
                         "container_id": container_id,
@@ -948,7 +998,7 @@ class Scanner:
         """Check container-related files for suspicious content"""
         filename = os.path.basename(filepath).lower()
         
-        # Check common container files
+        
         suspicious_container_files = [
             "dockerfile", "docker-compose.yml", "docker-compose.yaml", 
             ".dockerignore", "docker-entrypoint.sh"
@@ -962,7 +1012,7 @@ class Scanner:
                 is_suspicious = False
                 reason = []
                 
-                # Check for suspicious commands or configurations
+                
                 suspicious_patterns = [
                     r'FROM\s+kali', r'FROM\s+parrot', r'FROM\s+blackarch',
                     r'RUN.*apt-get.*nmap', r'RUN.*apt-get.*metasploit',
@@ -977,7 +1027,7 @@ class Scanner:
                         is_suspicious = True
                         reason.append(f"Matches suspicious pattern: {pattern}")
                 
-                # Add to findings if suspicious
+                
                 if is_suspicious:
                     self.findings["container_artifacts"].append({
                         "path": filepath,
@@ -1003,7 +1053,7 @@ class Scanner:
     def _scan_windows_processes(self) -> None:
         """Scan Windows processes for suspicious characteristics"""
         try:
-            # Use wmic to list processes with command line
+            
             result = subprocess.run(
                 ["wmic", "process", "get", "Caption,ProcessId,CommandLine", "/format:csv"],
                 capture_output=True, text=True, check=False
@@ -1015,7 +1065,7 @@ class Scanner:
                 
             lines = result.stdout.strip().splitlines()
             
-            # Skip header line
+            
             for line in lines[1:]:
                 if not line.strip():
                     continue
@@ -1036,7 +1086,7 @@ class Scanner:
     def _scan_unix_processes(self) -> None:
         """Scan Unix/Linux processes for suspicious characteristics"""
         try:
-            # Use ps to list processes with command line
+            
             result = subprocess.run(
                 ["ps", "-eo", "pid,comm,args"],
                 capture_output=True, text=True, check=False
@@ -1048,7 +1098,7 @@ class Scanner:
                 
             lines = result.stdout.strip().splitlines()
             
-            # Skip header line
+            
             for line in lines[1:]:
                 if not line.strip():
                     continue
@@ -1070,27 +1120,27 @@ class Scanner:
         is_suspicious = False
         reason = []
         
-        # Check if process name matches known red team tools
+        
         if any(tool.lower() in process_name.lower() for tool in COMMON_TOOL_NAMES):
             is_suspicious = True
             matching_tools = [tool for tool in COMMON_TOOL_NAMES if tool.lower() in process_name.lower()]
             reason.append(f"Process name matches known red team tool: {', '.join(matching_tools)}")
         
-        # Check for suspicious command line arguments
+        
         suspicious_cmd_patterns = [
-            r"-e\s+[A-Za-z0-9+/=]{10,}",  # Encoded PowerShell
-            r"-enc\s+[A-Za-z0-9+/=]{10,}",  # Encoded PowerShell
-            r"-exec\s+bypass",  # PowerShell execution policy bypass
-            r"IEX\s*\(",  # PowerShell Invoke-Expression
-            r"curl\s+.*\|\s*sh",  # Pipe curl to shell
-            r"wget\s+.*\|\s*bash",  # Pipe wget to bash
-            r"nc\s+-e",  # Netcat with -e flag
-            r"chmod\s+.*\+x",  # Making files executable
-            r"socat\s+.*exec",  # Socat with exec
-            r"bash\s+-i",  # Interactive bash shell
-            r"python\s+-c.*socket",  # Python one-liner socket
-            r"/dev/tcp/",  # Bash TCP sockets
-            r"base64\s+-d",  # Base64 decode
+            r"-e\s+[A-Za-z0-9+/=]{10,}",  
+            r"-enc\s+[A-Za-z0-9+/=]{10,}",  
+            r"-exec\s+bypass",  
+            r"IEX\s*\(",  
+            r"curl\s+.*\|\s*sh",  
+            r"wget\s+.*\|\s*bash",  
+            r"nc\s+-e",  
+            r"chmod\s+.*\+x",  
+            r"socat\s+.*exec",  
+            r"bash\s+-i",  
+            r"python\s+-c.*socket",  
+            r"/dev/tcp/",  
+            r"base64\s+-d",  
         ]
         
         for pattern in suspicious_cmd_patterns:
@@ -1098,21 +1148,21 @@ class Scanner:
                 is_suspicious = True
                 reason.append(f"Command line contains suspicious pattern: {pattern}")
         
-        # Check for processes running from suspicious locations
+        
         suspicious_paths = ["/tmp/", "/dev/shm/", "%TEMP%", "%APPDATA%", "\\Users\\Public\\"]
         if any(path.lower() in cmdline.lower() for path in suspicious_paths):
             is_suspicious = True
             reason.append("Process running from suspicious location")
         
-        # In paranoid mode, check for any processes with encoded arguments
+        
         if self.profile == "paranoid":
             if re.search(r"[A-Za-z0-9+/=]{20,}", cmdline):
                 is_suspicious = True
                 reason.append("Command line contains possible encoded data (paranoid mode)")
         
-        # Add to findings if suspicious
+        
         if is_suspicious:
-            # Get memory info for the process
+            
             memory_info = self._get_process_memory_info(pid)
             
             self.findings["memory_artifacts"].append({
@@ -1140,7 +1190,7 @@ class Scanner:
                         memory_usage = parts[4].strip('"')
                         memory_info["memory_usage"] = memory_usage
             else:
-                # Get memory info using ps
+                
                 result = subprocess.run(
                     ["ps", "-p", pid, "-o", "vsz,rss"],
                     capture_output=True, text=True, check=False
@@ -1157,128 +1207,126 @@ class Scanner:
             
         return memory_info
     
-    def scan_system(self) -> Dict[str, Any]:
+    def scan_system(self, locations: Optional[List[str]] = None) -> Dict[str, Any]:
         """Run a comprehensive system scan"""
         print(f"Starting RedTriage scan (profile: {self.profile})")
         
         # Scan for suspicious files
-        self.scan_files()
+        self.scan_files(locations)
         
-        # Scan for modified config files
-        self.scan_modified_configs()
-        
-        # Scan for suspicious shell history entries
+        # Scan shell histories
         self.scan_shell_histories()
         
-        # Scan for suspicious scheduled tasks
+        # Scan modified configuration files
+        self.scan_modified_configs()
+        
+        # Scan scheduled tasks
         self.scan_scheduled_tasks()
         
-        # Scan for suspicious network connections
+        # Scan network settings and connections
         self.scan_network_connections()
         
-        # Run comprehensive network scan
+        # Get more detailed network artifacts
         network_findings = scan_network_artifacts(self.dry_run, self.profile)
+        self.findings.update(network_findings)
         
-        # Incorporate network scan results
-        if network_findings and "suspicious_connections" in network_findings:
-            if "suspicious_network" not in self.findings:
-                self.findings["suspicious_network"] = []
-            self.findings["suspicious_network"].extend(network_findings["suspicious_connections"])
-        
-        # Add other network findings
-        for key in ["listening_ports", "dns_queries", "proxy_settings", "vpn_connections", 
-                   "ssh_connections", "firewall_modifications"]:
-            if key in network_findings and network_findings[key]:
-                self.findings[key] = network_findings[key]
-        
-        # Scan Windows registry for suspicious entries
+        # Scan Windows registry if on Windows
         if self.os == "Windows":
             self.scan_windows_registry()
             
         # Scan for container artifacts
         self.scan_containers()
         
-        # Scan for memory artifacts and suspicious processes
+        # Scan processes and memory
         self.scan_memory_artifacts()
         
-        # Add scan metadata
-        self.findings["metadata"] = {
-            "timestamp": datetime.now().isoformat(),
-            "os": self.os,
-            "hostname": platform.node(),
-            "profile": self.profile,
-            "target_user": self.target_user,
-            "dry_run": self.dry_run
-        }
+        # Save results
+        output_file = f"redtriage_scan_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
+        with open(output_file, 'w') as f:
+            json.dump(self.findings, f, indent=2)
+        
+        from rich.console import Console
+        console = Console()
+        
+        # Print summary
+        console.print("\n[bold]SCAN COMPLETE[/bold]", highlight=False)
+        console.print(f"Results saved to: [cyan]{output_file}[/cyan]", highlight=False)
+        
+        console.print("\n" + "="*60, highlight=False)
+        
+        # Print findings summary
+        console.print("\n[bold]SCAN SUMMARY[/bold]", highlight=False)
+        
+        # File system findings
+        console.print("\n[bold]File System:[/bold]", highlight=False)
+        console.print(f"🔍 Suspicious files: [cyan]{len(self.findings['suspicious_files'])}", highlight=False)
+        console.print(f"🔍 Modified configs: [cyan]{len(self.findings['modified_configs'])}", highlight=False)
+        console.print(f"🔍 Shell histories with suspicious commands: [cyan]{len(self.findings['shell_histories'])}", highlight=False)
+        
+        # Scheduled tasks
+        console.print("\n[bold]Scheduled Tasks:[/bold]", highlight=False)
+        console.print(f"🔍 Suspicious scheduled tasks: [cyan]{len(self.findings['scheduled_tasks'])}", highlight=False)
+        
+        # Network findings
+        console.print("\n[bold]Network:[/bold]", highlight=False)
+        if "suspicious_network" in self.findings:
+            console.print(f"🔍 Suspicious network connections: [cyan]{len(self.findings['suspicious_network'])}", highlight=False)
+        if "listening_ports" in self.findings:
+            console.print(f"🔍 Unusual listening ports: [cyan]{len(self.findings['listening_ports'])}", highlight=False)
+        if "firewall_modifications" in self.findings:
+            console.print(f"🔍 Suspicious firewall rules: [cyan]{len(self.findings['firewall_modifications'])}", highlight=False)
+        if "proxy_settings" in self.findings:
+            console.print(f"🔍 Suspicious proxy settings: [cyan]{len(self.findings['proxy_settings'])}", highlight=False)
+        if "vpn_connections" in self.findings:
+            console.print(f"🔍 Active VPN connections: [cyan]{len(self.findings['vpn_connections'])}", highlight=False)
+        if "ssh_connections" in self.findings:
+            console.print(f"🔍 Suspicious SSH connections: [cyan]{len(self.findings['ssh_connections'])}", highlight=False)
+        
+        # Other artifacts
+        console.print("\n[bold]Other Artifacts:[/bold]", highlight=False)
+        if "container_artifacts" in self.findings:
+            console.print(f"🔍 Suspicious container artifacts: [cyan]{len(self.findings['container_artifacts'])}", highlight=False)
+        if "memory_artifacts" in self.findings:
+            console.print(f"🔍 Suspicious processes: [cyan]{len(self.findings['memory_artifacts'])}", highlight=False)
+        
+        # Windows-specific findings
+        if self.os == "Windows" and "registry_artifacts" in self.findings:
+            console.print("\n[bold]Windows-specific:[/bold]", highlight=False)
+            console.print(f"🔍 Registry artifacts: [cyan]{len(self.findings['registry_artifacts'])}", highlight=False)
+        
+        console.print("\n[italic]Use 'redtriage.py clean' to clean these artifacts[/italic]", highlight=False)
+        
+        # Add system info to findings
+        self.findings["os"] = self.os
+        self.findings["scan_time"] = datetime.now().isoformat()
+        self.findings["profile"] = self.profile
         
         return self.findings
 
 def scan_artifacts(dry_run: bool, profile: str, target_user: Optional[str] = None, 
-                  locations: Optional[List[str]] = None) -> Dict[str, Any]:
-    """Run the scan functionality"""
-    scanner = Scanner(dry_run, profile, target_user)
+                  locations: Optional[List[str]] = None, date_filter: Optional[Dict[str, datetime]] = None) -> Dict[str, Any]:
+    """
+    Scan the system for common red team artifacts
     
-    if locations:
-        scanner.scan_files(locations)
-    else:
-        findings = scanner.scan_system()
+    Args:
+        dry_run: Whether to perform a dry run
+        profile: Scanning profile (minimal, standard, paranoid)
+        target_user: User directory to target
+        locations: Specific locations to scan
+        date_filter: Optional dictionary with 'after' and/or 'before' datetime objects
     
-    # Save findings to a file
-    output_file = f"redtriage_scan_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
-    with open(output_file, 'w') as f:
-        json.dump(scanner.findings, f, indent=2)
+    Returns:
+        Dictionary containing scan results
+    """
+    # Print date filter info if applicable
+    if date_filter:
+        date_filter_description = []
+        if 'after' in date_filter:
+            date_filter_description.append(f"after {date_filter['after'].strftime('%Y-%m-%d')}")
+        if 'before' in date_filter:
+            date_filter_description.append(f"before {date_filter['before'].strftime('%Y-%m-%d')}")
+        if date_filter_description:
+            print(f"Date filter: Only including files modified {' and '.join(date_filter_description)}")
     
-    from rich.console import Console
-    console = Console()
-    
-    # Print summary header
-    console.print("\n[bold]SCAN COMPLETE[/bold]", highlight=False)
-    console.print(f"Results saved to: [cyan]{output_file}[/cyan]", highlight=False)
-    
-    # Separator
-    console.print("\n" + "="*60, highlight=False)
-    
-    # Print main summary with clear category headers
-    console.print("\n[bold]SCAN SUMMARY[/bold]", highlight=False)
-    
-    # File system artifacts
-    console.print("\n[bold]File System:[/bold]", highlight=False)
-    console.print(f"🔍 Suspicious files: [cyan]{len(scanner.findings['suspicious_files'])}", highlight=False)
-    console.print(f"🔍 Modified configs: [cyan]{len(scanner.findings['modified_configs'])}", highlight=False)
-    console.print(f"🔍 Shell histories with suspicious commands: [cyan]{len(scanner.findings['shell_histories'])}", highlight=False)
-    
-    # Scheduled tasks
-    console.print("\n[bold]Scheduled Tasks:[/bold]", highlight=False)
-    console.print(f"🔍 Suspicious scheduled tasks: [cyan]{len(scanner.findings['scheduled_tasks'])}", highlight=False)
-    
-    # Network artifacts
-    console.print("\n[bold]Network:[/bold]", highlight=False)
-    if "suspicious_network" in scanner.findings:
-        console.print(f"🔍 Suspicious network connections: [cyan]{len(scanner.findings['suspicious_network'])}", highlight=False)
-    if "listening_ports" in scanner.findings:
-        console.print(f"🔍 Unusual listening ports: [cyan]{len(scanner.findings['listening_ports'])}", highlight=False)
-    if "firewall_modifications" in scanner.findings:
-        console.print(f"🔍 Suspicious firewall rules: [cyan]{len(scanner.findings['firewall_modifications'])}", highlight=False)
-    if "proxy_settings" in scanner.findings:
-        console.print(f"🔍 Suspicious proxy settings: [cyan]{len(scanner.findings['proxy_settings'])}", highlight=False)
-    if "vpn_connections" in scanner.findings:
-        console.print(f"🔍 Active VPN connections: [cyan]{len(scanner.findings['vpn_connections'])}", highlight=False)
-    if "ssh_connections" in scanner.findings:
-        console.print(f"🔍 Suspicious SSH connections: [cyan]{len(scanner.findings['ssh_connections'])}", highlight=False)
-    
-    # Other artifacts
-    console.print("\n[bold]Other Artifacts:[/bold]", highlight=False)
-    if "container_artifacts" in scanner.findings:
-        console.print(f"🔍 Suspicious container artifacts: [cyan]{len(scanner.findings['container_artifacts'])}", highlight=False)
-    if "memory_artifacts" in scanner.findings:
-        console.print(f"🔍 Suspicious processes: [cyan]{len(scanner.findings['memory_artifacts'])}", highlight=False)
-    
-    # Windows-specific
-    if scanner.os == "Windows" and "registry_artifacts" in scanner.findings:
-        console.print("\n[bold]Windows-specific:[/bold]", highlight=False)
-        console.print(f"🔍 Registry artifacts: [cyan]{len(scanner.findings['registry_artifacts'])}", highlight=False)
-    
-    # Final note
-    console.print("\n[italic]Use 'redtriage.py clean' to clean these artifacts[/italic]", highlight=False)
-    
-    return scanner.findings 
+    scanner = Scanner(dry_run, profile, target_user, date_filter)
+    return scanner.scan_system(locations) 

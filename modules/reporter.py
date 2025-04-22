@@ -1,7 +1,7 @@
-#!/usr/bin/env python3
 """
 Reporter module for RedTriage
 Generates reports of findings and cleanup actions
+Created by: Zarni (Neo)
 """
 
 import os
@@ -11,11 +11,9 @@ import logging
 from typing import Dict, Any, Optional
 from datetime import datetime
 
-# Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
-# Reportlab imports are handled in the generate_pdf_report method to make it optional
 
 class Reporter:
     def __init__(self, output_format: str, output_file: Optional[str] = None):
@@ -27,12 +25,12 @@ class Reporter:
         """Generate a text report from the data"""
         report = []
         
-        # Add header
+        
         report.append("=" * 50)
         report.append("RedTriage Report")
         report.append("=" * 50)
         
-        # Add metadata
+        
         if "metadata" in data:
             report.append("\nMetadata:")
             report.append("-" * 50)
@@ -46,7 +44,7 @@ class Reporter:
             if "force" in metadata:
                 report.append(f"Force: {metadata.get('force', False)}")
         
-        # Add suspicious files
+        
         if "suspicious_files" in data and data["suspicious_files"]:
             report.append("\nSuspicious Files:")
             report.append("-" * 50)
@@ -58,7 +56,7 @@ class Reporter:
                 report.append(f"   Reason: {file_info.get('reason', 'Unknown')}")
                 report.append("")
         
-        # Add modified configs
+        
         if "modified_configs" in data and data["modified_configs"]:
             report.append("\nModified Configuration Files:")
             report.append("-" * 50)
@@ -67,7 +65,7 @@ class Reporter:
                 report.append(f"   Modified: {config_info.get('modified', 'Unknown')}")
                 report.append("")
         
-        # Add shell histories with suspicious commands
+        
         if "shell_histories" in data and data["shell_histories"]:
             report.append("\nShell Histories with Suspicious Commands:")
             report.append("-" * 50)
@@ -80,7 +78,7 @@ class Reporter:
                         report.append(f"     {j}. {cmd}")
                 report.append("")
         
-        # Add suspicious scheduled tasks
+        
         if "scheduled_tasks" in data and data["scheduled_tasks"]:
             report.append("\nSuspicious Scheduled Tasks/Cron Jobs:")
             report.append("-" * 50)
@@ -96,7 +94,7 @@ class Reporter:
                 if "modified" in task_info:
                     report.append(f"   Modified: {task_info['modified']}")
                     
-                # For cron jobs, include content
+                
                 if "content" in task_info:
                     content = task_info["content"]
                     if len(content) > 500:
@@ -105,7 +103,7 @@ class Reporter:
                     
                 report.append("")
         
-        # Add suspicious network connections
+        
         if "suspicious_network" in data and data["suspicious_network"]:
             report.append("\nSuspicious Network Connections:")
             report.append("-" * 50)
@@ -119,7 +117,7 @@ class Reporter:
                 report.append(f"   Reason: {net_info.get('reason', 'Unknown')}")
                 report.append("")
         
-        # Add registry artifacts
+        
         if "registry_artifacts" in data and data["registry_artifacts"]:
             report.append("\nSuspicious Registry Entries:")
             report.append("-" * 50)
@@ -130,7 +128,7 @@ class Reporter:
                 report.append(f"   Reason: {reg_info.get('reason', 'Unknown')}")
                 report.append("")
         
-        # Add container artifacts
+        
         if "container_artifacts" in data and data["container_artifacts"]:
             report.append("\nSuspicious Container Artifacts:")
             report.append("-" * 50)
@@ -146,7 +144,7 @@ class Reporter:
                 report.append(f"   Reason: {container_info.get('reason', 'Unknown')}")
                 report.append("")
         
-        # Add memory artifacts
+        
         if "memory_artifacts" in data and data["memory_artifacts"]:
             report.append("\nSuspicious Processes:")
             report.append("-" * 50)
@@ -167,7 +165,7 @@ class Reporter:
                 report.append(f"   Reason: {proc_info.get('reason', 'Unknown')}")
                 report.append("")
         
-        # Add cleaned items if available
+        
         if "files" in data:
             report.append("\nCleaned Files:")
             report.append("-" * 50)
@@ -254,7 +252,7 @@ class Reporter:
             else:
                 report.append("None")
         
-        # Add summary
+        
         report.append("\nSummary:")
         report.append("-" * 50)
         
@@ -304,12 +302,12 @@ class Reporter:
             "    <style>",
             "        body { font-family: Arial, sans-serif; margin: 20px; }",
             "        .container { max-width: 1200px; margin: 0 auto; }",
-            "        h1, h2, h3 { color: #d9534f; }",
-            "        .section { margin-bottom: 30px; border: 1px solid #ddd; padding: 15px; border-radius: 5px; }",
-            "        .item { margin-bottom: 15px; padding-bottom: 15px; border-bottom: 1px dotted #eee; }",
+            "        h1, h2, h3 { color: #d33; }",
+            "        .section { margin-bottom: 30px; border: 1px solid #ccc; }",
+            "        .item { margin-bottom: 15px; padding-bottom: 15px; border-bottom: 1px dotted #ddd; }",
             "        .item:last-child { border-bottom: none; }",
-            "        .header { background-color: #f8f9fa; padding: 10px; }",
-            "        .footer { background-color: #f8f9fa; padding: 10px; font-size: 12px; text-align: center; }",
+            "        .header { background-color: #f5f5f5; }",
+            "        .footer { background-color: #f5f5f5; }",
             "        .summary { display: flex; flex-wrap: wrap; }",
             "        .summary-item { flex: 0 0 50%; margin-bottom: 10px; }",
             "        table { width: 100%; border-collapse: collapse; }",
@@ -329,7 +327,7 @@ class Reporter:
             "        </div>",
         ]
         
-        # Metadata
+        
         if "metadata" in data:
             html.append("        <div class='section'>")
             html.append("            <h2>Metadata</h2>")
@@ -347,7 +345,7 @@ class Reporter:
             html.append("            </table>")
             html.append("        </div>")
         
-        # Suspicious Files
+        
         if "suspicious_files" in data and data["suspicious_files"]:
             html.append("        <div class='section'>")
             html.append("            <h2 class='suspicious'>Suspicious Files</h2>")
@@ -366,7 +364,7 @@ class Reporter:
             html.append("            </table>")
             html.append("        </div>")
         
-        # Modified Configs
+        
         if "modified_configs" in data and data["modified_configs"]:
             html.append("        <div class='section'>")
             html.append("            <h2 class='suspicious'>Modified Configuration Files</h2>")
@@ -382,7 +380,7 @@ class Reporter:
             html.append("            </table>")
             html.append("        </div>")
             
-        # Shell Histories
+        
         if "shell_histories" in data and data["shell_histories"]:
             html.append("        <div class='section'>")
             html.append("            <h2 class='suspicious'>Shell Histories with Suspicious Commands</h2>")
@@ -405,7 +403,7 @@ class Reporter:
                     
             html.append("        </div>")
             
-        # Scheduled Tasks
+        
         if "scheduled_tasks" in data and data["scheduled_tasks"]:
             html.append("        <div class='section'>")
             html.append("            <h2 class='suspicious'>Suspicious Scheduled Tasks/Cron Jobs</h2>")
@@ -424,7 +422,7 @@ class Reporter:
                     
                 html.append(f"                    <td>{task_info.get('reason', 'Unknown')}</td>")
                 
-                # Details
+                
                 details = "N/A"
                 if "content" in task_info:
                     details = task_info["content"]
@@ -437,12 +435,12 @@ class Reporter:
             html.append("            </table>")
             html.append("        </div>")
             
-        # Cleaned items
+        
         if all(k in data for k in ["files", "histories", "tasks", "configs"]):
             html.append("        <div class='section'>")
             html.append("            <h2 class='cleaned'>Cleanup Actions</h2>")
             
-            # Files
+            
             html.append("            <h3>Cleaned Files</h3>")
             if data["files"]:
                 html.append("            <ul>")
@@ -452,7 +450,7 @@ class Reporter:
             else:
                 html.append("            <p>None</p>")
                 
-            # Histories
+            
             html.append("            <h3>Cleaned Shell Histories</h3>")
             if data["histories"]:
                 html.append("            <ul>")
@@ -462,7 +460,7 @@ class Reporter:
             else:
                 html.append("            <p>None</p>")
                 
-            # Tasks
+            
             html.append("            <h3>Removed Scheduled Tasks/Cron Jobs</h3>")
             if data["tasks"]:
                 html.append("            <ul>")
@@ -475,7 +473,7 @@ class Reporter:
             else:
                 html.append("            <p>None</p>")
                 
-            # Configs
+            
             html.append("            <h3>Restored Configuration Files</h3>")
             if data["configs"]:
                 html.append("            <ul>")
@@ -487,7 +485,7 @@ class Reporter:
                 
             html.append("        </div>")
         
-        # Summary
+        
         html.append("        <div class='section'>")
         html.append("            <h2>Summary</h2>")
         html.append("            <div class='summary'>")
@@ -513,12 +511,12 @@ class Reporter:
         html.append("            </div>")
         html.append("        </div>")
         
-        # Footer
+        
         html.append("        <div class='footer'>")
         html.append(f"            <p>Report generated by RedTriage on {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}</p>")
         html.append("        </div>")
         
-        # Close tags
+        
         html.append("    </div>")
         html.append("</body>")
         html.append("</html>")
@@ -592,7 +590,7 @@ class Reporter:
         doc = SimpleDocTemplate(output_path, pagesize=letter)
         styles = getSampleStyleSheet()
         
-        # Create custom styles
+        
         title_style = ParagraphStyle(
             'Title',
             parent=styles['Heading1'],
@@ -608,19 +606,19 @@ class Reporter:
         )
         normal_style = styles["Normal"]
         
-        # Build the document
+        
         elements = []
         
-        # Title
+        
         elements.append(Paragraph("Incident Response Report", title_style))
         elements.append(Spacer(1, 12))
         
-        # Metadata
+        
         elements.append(Paragraph(f"Report Date: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}", normal_style))
         elements.append(Paragraph(f"System: {platform.node()} - {platform.system()} {platform.release()}", normal_style))
         elements.append(Spacer(1, 12))
         
-        # Summary section
+        
         elements.append(Paragraph("Summary", heading_style))
         summary_data = [
             ["Category", "Suspicious", "Cleaned"]
@@ -648,7 +646,7 @@ class Reporter:
         elements.append(summary_table)
         elements.append(Spacer(1, 12))
         
-        # Function to add a section with table data
+        
         def add_section(title, data_list, headers):
             if not data_list:
                 return
@@ -676,7 +674,7 @@ class Reporter:
             elements.append(table)
             elements.append(Spacer(1, 12))
         
-        # Add suspicious items sections
+        
         add_section("Suspicious Files", data.get("suspicious_files", []), ["Path", "Type", "Reason"])
         add_section("Modified Configurations", data.get("modified_configs", []), ["Path", "Type", "Modification"])
         add_section("Suspicious Shell Histories", data.get("shell_histories", []), ["User", "Command", "Timestamp"])
@@ -686,7 +684,7 @@ class Reporter:
         add_section("Suspicious Container Artifacts", data.get("container_artifacts", []), ["Container", "Image", "Issue"])
         add_section("Suspicious Processes", data.get("memory_artifacts", []), ["PID", "Name", "Command", "User"])
         
-        # Add cleaned items sections
+        
         add_section("Cleaned Files", data.get("files", []), ["Path", "Action"])
         add_section("Restored Configurations", data.get("configs", []), ["Path", "Action"])
         add_section("Cleaned Shell Histories", data.get("histories", []), ["User", "Action"])
@@ -696,7 +694,7 @@ class Reporter:
         add_section("Cleaned Containers", data.get("containers", []), ["Container", "Action"])
         add_section("Terminated Processes", data.get("processes", []), ["Process", "Action"])
         
-        # Build the PDF
+        
         doc.build(elements)
         
         logger.info(f"PDF report generated and saved to {output_path}")
@@ -704,28 +702,28 @@ class Reporter:
     def generate_report(self, data: Dict[str, Any]) -> None:
         """Generate a report from the data"""
         if self.output_format == "json":
-            # JSON format is already handled, just pretty print
+            
             report_content = self.generate_json_report(data)
             output_type = "JSON"
         elif self.output_format == "html":
-            # Generate HTML report
+            
             report_content = self.generate_html_report(data)
             output_type = "HTML"
         elif self.output_format == "pdf":
-            # Generate PDF report
+            
             self.generate_pdf_report(data, self.output_file)
             return
         else:
-            # Default to text format
+            
             report_content = self.generate_txt_report(data)
             output_type = "Text"
         
-        # Determine output file
+        
         if not self.output_file:
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
             self.output_file = f"redtriage_report_{timestamp}.{self.output_format}"
         
-        # Write to file
+        
         with open(self.output_file, 'w', encoding='utf-8') as f:
             f.write(report_content)
             
@@ -735,11 +733,11 @@ class Reporter:
 def generate_report(output_format: str, output_file: Optional[str] = None, 
                    scan_results_file: Optional[str] = None) -> None:
     """Generate a report from scan or cleanup results"""
-    # Determine which file to use
+    
     data = {}
     
     if scan_results_file:
-        # Use specified file
+        
         try:
             with open(scan_results_file, 'r') as f:
                 data = json.load(f)
@@ -748,10 +746,10 @@ def generate_report(output_format: str, output_file: Optional[str] = None,
             print(f"Error loading data from {scan_results_file}: {e}")
             return
     else:
-        # Try to find the most recent scan or cleanup file
+        
         results_files = []
         
-        # Look for scan and cleanup files
+        
         for filename in os.listdir('.'):
             if (filename.startswith('redtriage_scan_') or filename.startswith('redtriage_cleanup_')) \
                and filename.endswith('.json'):
@@ -761,7 +759,7 @@ def generate_report(output_format: str, output_file: Optional[str] = None,
             print("No scan or cleanup results found. Run 'scan' or 'clean' command first.")
             return
             
-        # Sort by modification time (newest first)
+        
         results_files.sort(key=lambda x: os.path.getmtime(x), reverse=True)
         latest_file = results_files[0]
         
@@ -773,6 +771,6 @@ def generate_report(output_format: str, output_file: Optional[str] = None,
             print(f"Error loading data from {latest_file}: {e}")
             return
     
-    # Generate report
+    
     reporter = Reporter(output_format, output_file)
     reporter.generate_report(data) 
